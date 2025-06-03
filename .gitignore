@@ -1,0 +1,119 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+.env/
+
+# Environment Variables (重要！保護敏感信息)
+.env
+.env.local
+.env.production
+.env.staging
+.env.enhanced
+.env.optimized
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Logs
+*.log
+logs/
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+
+# nyc test coverage
+.nyc_output
+
+# Dependency directories
+node_modules/
+
+# Google Cloud credentials (重要！保護服務帳號金鑰)
+*.json
+service-account-*.json
+credentials/
+key/
+
+# API Keys and Secrets (重要！保護 API 金鑰)
+*api*key*
+*secret*
+*token*
+*password*
+
+# Temporary files
+*.tmp
+*.temp
+
+# Cache
+.cache/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Compiled files
+*.com
+*.class
+*.dll
+*.exe
+*.o
+*.so
+
+# Packages
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# Local configuration files
+config.local.*
+local.properties
+
+# Output directories
+output/
+tmp/
+temp/

@@ -1,0 +1,313 @@
+body {
+    font-family: 'Arial', sans-serif;
+    margin: 0;
+    padding: 20px;
+    background-color: #e0e5ec;
+    color: #555;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+}
+
+h1 {
+    color: #8a99ab;
+    text-align: center;
+    margin-bottom: 30px;
+    font-weight: 300;
+    font-size: 2.5em;
+}
+
+form {
+    margin-top: 20px;
+    width: 100%;
+    max-width: 800px; /* Max width for the form */
+    background-color: #e0e5ec;
+    padding: 20px;
+    border-radius: 20px;
+}
+
+table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    background-color: transparent;
+    box-shadow: none;
+}
+
+thead {
+    position: absolute;
+    top: -9999px;
+    left: -9999px;
+}
+
+tr {
+    display: block;
+    background-color: #e0e5ec;
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 
+        -6px -6px 12px #ffffff,
+        6px 6px 12px #bec3c9;
+    margin-bottom: 25px;
+}
+tr:last-child {
+    margin-bottom: 0;
+}
+
+td {
+    display: block;
+    border: none;
+    padding: 0;
+    text-align: left;
+    margin-bottom: 15px;
+}
+td:last-child {
+    margin-bottom: 0;
+}
+
+td::before {
+    content: attr(data-label);
+    display: block;
+    width: 100%;
+    white-space: normal;
+    text-align: left;
+    font-weight: 600;
+    color: #8a99ab;
+    margin-bottom: 8px;
+    font-size: 0.9em;
+}
+
+input[type="text"],
+input[type="date"],
+select,
+textarea {
+    width: 100%;
+    padding: 15px 20px;
+    margin: 0;
+    border: none;
+    border-radius: 20px;
+    box-sizing: border-box;
+    background-color: #e0e5ec;
+    color: #555;
+    font-size: 1em;
+    box-shadow: 
+        inset 5px 5px 8px #bec3c9,
+        inset -5px -5px 8px #ffffff;
+    outline: none;
+}
+
+input[type="text"]::placeholder,
+textarea::placeholder {
+    color: #8a99ab;
+}
+
+textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%238a99ab%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.4-5.4-12.8z%22%2F%3E%3C%2Fsvg%3E');
+    background-repeat: no-repeat;
+    background-position: right 20px center;
+    background-size: 12px;
+    padding-right: 45px;
+}
+
+/* Designer Options Radio Buttons as Neumorphic Buttons */
+.designer-options { /* Only designer-options remain for this style */
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px; 
+    margin-top: 5px;
+}
+
+.designer-options input[type="radio"] {
+    display: none;
+}
+
+.designer-options label {
+    padding: 10px 15px;
+    background-color: #e0e5ec;
+    color: #6c7a8a;
+    border-radius: 15px;
+    cursor: pointer;
+    font-size: 0.9em;
+    font-weight: 500;
+    box-shadow: 
+        -4px -4px 8px #ffffff,
+        4px 4px 8px #bec3c9;
+    transition: all 0.2s ease-in-out;
+    text-align: center;
+    flex-grow: 1; 
+    min-width: 80px; 
+}
+
+.designer-options input[type="radio"]:checked + label {
+    box-shadow: 
+        inset 3px 3px 6px #bec3c9,
+        inset -3px -3px 6px #ffffff;
+    color: #555;
+    font-weight: 600;
+}
+
+.designer-options label:hover {
+    box-shadow: 
+        -2px -2px 5px #ffffff,
+        2px 2px 5px #bec3c9;
+}
+
+/* Specs Checkboxes Wrapper - Frame container */
+#specsCheckboxWrapper {
+    background-color: #e0e5ec;
+    border-radius: 20px;
+    padding: 15px;
+    margin-top: 5px;
+    box-shadow: 
+        inset 3px 3px 6px #bec3c9,
+        inset -3px -3px 6px #ffffff;
+}
+
+/* Specs Checkboxes (Digital Type) Styling - Same as designer options */
+#specsCheckboxContainer {
+    display: flex; 
+    flex-wrap: wrap; 
+    gap: 10px; /* Same gap as designer options */
+    margin: 0; /* Remove margin since wrapper has padding */
+}
+
+#specsCheckboxContainer .checkbox-option {
+     /* Use exact same flex properties as designer options */
+     flex-grow: 1; /* Allow buttons to grow like designer options */
+     min-width: 80px; /* Same minimum width as designer options */
+}
+
+#specsCheckboxContainer .checkbox-option input[type="checkbox"] {
+    display: none; 
+}
+
+#specsCheckboxContainer .checkbox-option label {
+    display: block; /* Make label a block so it fills the .checkbox-option container */
+    width: 100%; /* Fill the container */
+    padding: 10px 15px; /* Same padding as designer options */
+    background-color: #e0e5ec;
+    color: #6c7a8a;
+    border-radius: 15px;
+    cursor: pointer;
+    font-size: 0.9em;
+    font-weight: 500;
+    box-shadow: 
+        -4px -4px 8px #ffffff,
+        4px 4px 8px #bec3c9;
+    transition: all 0.2s ease-in-out;
+    text-align: center; /* Center align like designer options */
+    box-sizing: border-box; /* Ensure padding is included in width calculation */
+}
+
+#specsCheckboxContainer .checkbox-option input[type="checkbox"]:checked + label {
+    box-shadow: 
+        inset 3px 3px 6px #bec3c9,
+        inset -3px -3px 6px #ffffff;
+    color: #555;
+    font-weight: 600;
+}
+
+#specsCheckboxContainer .checkbox-option label:hover {
+    box-shadow: 
+        -2px -2px 5px #ffffff,
+        2px 2px 5px #bec3c9;
+}
+
+
+button[type="submit"] {
+    background-color: #e0e5ec;
+    color: #6c7a8a;
+    padding: 15px 30px;
+    margin-top: 30px;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 1.1em;
+    font-weight: 600;
+    box-shadow: 
+        -5px -5px 10px #ffffff,
+        5px 5px 10px #bec3c9;
+    transition: all 0.2s ease-in-out;
+    display: block;
+    width: auto;
+    min-width: 200px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+button[type="submit"]:hover {
+    box-shadow: 
+        -2px -2px 5px #ffffff,
+        2px 2px 5px #bec3c9;
+}
+
+button[type="submit"]:active {
+    box-shadow: 
+        inset 2px 2px 5px #bec3c9,
+        inset -2px -2px 5px #ffffff;
+    color: #555;
+}
+
+@media screen and (max-width: 480px) {
+    body {
+        padding: 10px;
+    }
+    h1 {
+        font-size: 1.8em;
+        margin-bottom: 20px;
+    }
+    form {
+        padding: 15px;
+        border-radius: 15px;
+    }
+    tr {
+        padding: 15px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+    }
+    input[type="text"],
+    input[type="date"],
+    select,
+    textarea {
+        padding: 12px 15px;
+        border-radius: 15px;
+    }
+    select {
+      background-position: right 15px center;
+    }
+    .designer-options label {
+        padding: 8px 12px;
+        font-size: 0.85em;
+        min-width: 70px; 
+    }
+    #specsCheckboxContainer .checkbox-option label {
+        padding: 10px 15px; 
+        font-size: 0.85em;
+        text-align: left; /* Ensure left align on small screens too */
+    }
+     #specsCheckboxContainer .checkbox-option {
+        /* On small screens, maybe 1 or 2 per row */
+        flex-basis: calc(100% - 0px); /* Full width for 1 per row */
+     }
+     @media screen and (min-width: 380px) and (max-width: 480px) {
+        #specsCheckboxContainer .checkbox-option {
+            flex-basis: calc(50% - 6px); /* 2 per row if a bit wider */
+        }
+     }
+
+
+    button[type="submit"] {
+        padding: 12px 25px;
+        font-size: 1em;
+        min-width: 160px;
+    }
+}

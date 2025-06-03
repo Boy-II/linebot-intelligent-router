@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>專案表單</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>專案表單</h1>
+    <form id="projectForm">
+        <table>
+            <thead>
+                <tr>
+                    <th>類型</th>
+                    <th>專案名稱</th>
+                    <th>單元內容</th>
+                    <th>填表人姓名</th>
+                    <th>美術設計</th>
+                    <th>尺寸規格</th>
+                    <th>色稿時間</th>
+                    <th>印刷時間</th>
+                    <th>補充說明</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td data-label="類型">
+                        <select name="type" required>
+                            <option value="">請選擇類型</option>
+                            <option value="數位">數位</option>
+                            <option value="期刊">期刊</option>
+                            <option value="一次刊">一次刊</option>
+                        </select>
+                    </td>
+                    <td data-label="專案名稱"><input type="text" name="projectName" required></td>
+                    <td data-label="單元內容"><input type="text" name="unitContent" required></td>
+                    <td data-label="填表人姓名">
+                        <input type="text" name="submitter_name" id="submitterNameDisplay" readonly style="background-color: #d1d9e6; cursor: default; box-shadow: none;">
+                    </td>
+                    <td data-label="美術設計">
+                        <div class="designer-options">
+                            <input type="radio" id="linBoYi" name="designer" value="林柏毅">
+                            <label for="linBoYi">林柏毅</label>
+                            <input type="radio" id="zhangKunYu" name="designer" value="張堃宇">
+                            <label for="zhangKunYu">張堃宇</label>
+                            <input type="radio" id="jiangYiZhen" name="designer" value="江宜珎">
+                            <label for="jiangYiZhen">江宜珎</label>
+                            <input type="radio" id="linYunRu" name="designer" value="林昀儒">
+                            <label for="linYunRu">林昀儒</label>
+                            <input type="radio" id="chenYing" name="designer" value="陳盈">
+                            <label for="chenYing">陳盈</label>
+                            <input type="radio" id="unassigned" name="designer" value="未指定" checked required>
+                            <label for="unassigned">未指定</label>
+                        </div>
+                    </td>
+                    <td data-label="尺寸規格">
+                        <div id="specsDropdownContainer">
+                            <select name="specs" id="specsSelect" required>
+                                <option value="">請選擇尺寸</option>
+                                <!-- Options will be populated by JS -->
+                                <option value="custom">自訂</option>
+                            </select>
+                            <input type="text" name="customSpecs" id="customSpecsInput" placeholder="請輸入自訂尺寸" style="display: none; margin-top: 10px;">
+                        </div>
+                        <div id="specsCheckboxWrapper" style="display: none;">
+                            <div id="specsCheckboxContainer">
+                                <!-- Checkboxes will be populated by JS -->
+                            </div>
+                        </div>
+                    </td>
+                    <td data-label="色稿時間"><input type="date" name="colorDraftDate" required></td>
+                    <td data-label="印刷時間"><input type="date" name="printDate" required></td>
+                    <td data-label="補充說明"><textarea name="notes" rows="3"></textarea></td>
+                </tr>
+            </tbody>
+        </table>
+        <input type="hidden" name="timestamp" id="timestamp">
+        <input type="hidden" name="submitter_id" id="submitter_id">
+        <button type="submit">提交</button>
+    </form>
+    <script src="script.js"></script>
+</body>
+</html>

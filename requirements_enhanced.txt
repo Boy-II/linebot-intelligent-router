@@ -1,0 +1,10 @@
+Flask
+line-bot-sdk
+requests
+gunicorn
+google-cloud-firestore
+python-dotenv
+aiohttp
+asyncio
+openai
+google-cloud-dialogflow

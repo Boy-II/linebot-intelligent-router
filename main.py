@@ -1,5 +1,8 @@
 import os
 import json
+import asyncio
+import aiohttp
+from datetime import datetime
 # 在檔案開頭載入環境變數
 from dotenv import load_dotenv
 load_dotenv()
@@ -16,88 +19,367 @@ from linebot.models import (
 app = Flask(__name__)
 
 # --- LINE Bot 設定 ---
-# 這些變數會在部署時設定在 Cloud Run 的環境變數中
-# 在本地測試時，您可以給予預設值或從 .env 檔讀取
 LINE_CHANNEL_ACCESS_TOKEN = os.environ.get('LINE_CHANNEL_ACCESS_TOKEN')
 LINE_CHANNEL_SECRET = os.environ.get('LINE_CHANNEL_SECRET')
 
-# 如果為 None，表示環境變數沒有設定，這在部署後就不會發生
 if not LINE_CHANNEL_ACCESS_TOKEN or not LINE_CHANNEL_SECRET:
     print("錯誤: LINE_CHANNEL_ACCESS_TOKEN 或 LINE_CHANNEL_SECRET 未設定!")
-    print("請確認 .env 檔案中是否包含這些環境變數，並且格式正確。")
-    print("如果您想手動設定這些值，請取消註解以下行並填入您的實際令牌。")
-    # LINE_CHANNEL_ACCESS_TOKEN = "YOUR_ACTUAL_LINE_CHANNEL_ACCESS_TOKEN_FOR_LOCAL"
-    # LINE_CHANNEL_SECRET = "YOUR_ACTUAL_LINE_CHANNEL_SECRET_FOR_LOCAL"
     import sys
-    sys.exit(1)  # 退出程式，避免後續錯誤
+    sys.exit(1)
 
 line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(LINE_CHANNEL_SECRET)
 
-# --- n8n Webhook 設定 ---
+# --- 智能路由配置 ---
 N8N_WEBHOOK_URL = os.environ.get('N8N_WEBHOOK_URL')
+DIALOGFLOW_PROJECT_ID = os.environ.get('DIALOGFLOW_PROJECT_ID')
 
-# --- Webhook 入口點 ---
-# LINE 會 POST 請求到這個 /callback 路徑
-@app.route("/callback", methods=['POST'])
-def callback():
-    # 獲取 LINE 簽名和請求體
-    signature = request.headers['X-Line-Signature']
-    body = request.get_data(as_text=True)
+# 導入 Dialogflow 客戶端（移除 LLM 客戶端）
+from dialogflow_client import dialogflow_client, context_manager
 
-    try:
-        # 使用 line-bot-sdk 處理 Webhook 事件
-        handler.handle(body, signature)
-    except InvalidSignatureError:
-        # 簽名驗證失敗，返回 400 錯誤
-        print("Invalid signature. Please check your channel access token/channel secret.")
-        abort(400)
+# --- 簡化的多層級路由處理器 ---
+class UnifiedMessageProcessor:
+    def __init__(self):
+        self.supported_commands = {
+            '/填表': 'form_filling',
+            '/填表單': 'form_filling',
+            '/畫圖': 'image_generation',
+            '/分析RSS': 'rss_analysis',
+            '/查詢狀態': 'status_query',
+            '/取消任務': 'cancel_task',
+            '/說明': 'help',
+            '/幫助': 'help'
+        }
+        
+    async def process_message(self, user_id, message_text, reply_token):
+        """統一的訊息處理入口"""
+        try:
+            print(f"處理用戶 {user_id} 的訊息: {message_text}")
+            
+            # 第一層：直接指令檢測
+            if message_text.startswith('/'):
+                return await self.handle_direct_command(user_id, message_text, reply_token)
+            
+            # 第二層：Dialogflow 意圖分析
+            dialogflow_result = await self.handle_with_dialogflow(user_id, message_text, reply_token)
+            if dialogflow_result.get('handled'):
+                return dialogflow_result
+            
+            # 第三層：轉發給 n8n 進行 LLM 處理
+            return await self.forward_to_n8n_for_llm_analysis(user_id, message_text, reply_token)
+            
+        except Exception as e:
+            print(f"訊息處理錯誤: {e}")
+            return await self.send_error_response(reply_token, str(e))
     
-    # 成功處理後，必須回覆 'OK'
-    return 'OK'
-
-# --- LINE 事件處理 ---
-
-# 處理訊息事件 (用戶發送文字訊息)
-@handler.add(MessageEvent, message=TextMessage)
-def handle_message(event):
-    user_id = event.source.user_id
-    message_text = event.message.text
-    reply_token = event.reply_token # 這是最重要的，用於回覆免費訊息
-
-    print(f"收到 User ID: {user_id} 的訊息: {message_text}")
-
-    if message_text == "/填表":
-        if user_id: # 確保有 user_id (表示已加入好友)
-            print(f"發送 Flex Message 給 {user_id}")
-            send_flex_reply_message(reply_token, user_id) 
+    async def handle_direct_command(self, user_id, message_text, reply_token):
+        """處理直接指令"""
+        parts = message_text.split(' ', 1)
+        command = parts[0]
+        args = parts[1] if len(parts) > 1 else ""
+        
+        if command in self.supported_commands:
+            command_type = self.supported_commands[command]
+            
+            if command_type == 'form_filling':
+                return await self.handle_form_command(user_id, reply_token)
+            elif command_type == 'image_generation':
+                return await self.handle_image_command(user_id, args, reply_token)
+            elif command_type == 'rss_analysis':
+                return await self.handle_rss_command(user_id, args, reply_token)
+            elif command_type == 'status_query':
+                return await self.handle_status_command(user_id, reply_token)
+            elif command_type == 'help':
+                return await self.handle_help_command(reply_token)
+            else:
+                return await self.trigger_n8n_workflow('direct_command', {
+                    'command': command,
+                    'args': args,
+                    'user_id': user_id,
+                    'reply_token': reply_token
+                })
         else:
-            # 對於非好友，沒有 reply_token，只能用 push，這會計費
-            # 在 Cloud Run 環境中要避免在這裡直接發送 push，因為會阻塞，應該交給 n8n
-            print(f"非好友用戶 {user_id} 嘗試發送 /填表，無法使用 reply API")
+            return await self.send_unknown_command_response(reply_token, command)
     
-    elif message_text.startswith("/畫圖"):
-        prompt = message_text[len("/畫圖"):].strip()
+    async def handle_with_dialogflow(self, user_id, message_text, reply_token):
+        """使用 Dialogflow 進行意圖分析"""
+        try:
+            # 更新上下文生命週期
+            context_manager.update_context_lifespan(user_id)
+            
+            # 獲取當前上下文
+            current_context = context_manager.get_context(user_id)
+            
+            # 使用 Dialogflow 客戶端
+            intent_result = await dialogflow_client.detect_intent(
+                text=message_text,
+                session_id=user_id,
+                context=current_context
+            )
+            
+            if intent_result['confidence'] > 0.7:
+                # 更新上下文
+                self._update_user_context(user_id, intent_result)
+                return await self.route_by_intent(intent_result, user_id, reply_token)
+            else:
+                return {'handled': False, 'reason': 'low_confidence', 'confidence': intent_result['confidence']}
+                
+        except Exception as e:
+            print(f"Dialogflow 處理錯誤: {e}")
+            return {'handled': False, 'reason': 'dialogflow_error'}
+    
+    def _update_user_context(self, user_id, intent_result):
+        """更新用戶上下文"""
+        intent_name = intent_result.get('intent', '')
+        parameters = intent_result.get('parameters', {})
+        
+        # 根據意圖設定相應的上下文
+        if intent_name == 'form_filling_intent':
+            context_manager.set_context(user_id, 'form_filling', parameters, 5)
+        elif intent_name == 'image_generation_intent':
+            context_manager.set_context(user_id, 'image_generation', parameters, 3)
+        elif intent_name == 'rss_analysis_intent':
+            context_manager.set_context(user_id, 'rss_analysis', parameters, 5)
+    
+    async def route_by_intent(self, intent_result, user_id, reply_token):
+        """根據 Dialogflow 意圖路由"""
+        intent_name = intent_result['intent']
+        parameters = intent_result.get('parameters', {})
+        
+        if intent_name == 'form_filling_intent':
+            await self.handle_form_command(user_id, reply_token)
+            return {'handled': True}
+            
+        elif intent_name == 'image_generation_intent':
+            prompt = parameters.get('prompt', '')
+            await self.handle_image_command(user_id, prompt, reply_token)
+            return {'handled': True}
+            
+        elif intent_name == 'rss_analysis_intent':
+            # 需要進一步收集 URL
+            line_bot_api.reply_message(
+                reply_token,
+                TextSendMessage(text="請提供要分析的 RSS 網址，或使用指令：/分析RSS [網址]")
+            )
+            return {'handled': True}
+            
+        elif intent_name == 'status_query_intent':
+            await self.handle_status_command(user_id, reply_token)
+            return {'handled': True}
+            
+        elif intent_name == 'help_intent':
+            await self.handle_help_command(reply_token)
+            return {'handled': True}
+            
+        else:
+            return {'handled': False}
+    
+    async def forward_to_n8n_for_llm_analysis(self, user_id, message_text, reply_token):
+        """轉發給 n8n 進行 LLM 分析和處理"""
+        
+        # 先回覆用戶表示正在處理
+        line_bot_api.reply_message(
+            reply_token,
+            TextSendMessage(text="正在分析您的需求，請稍候...")
+        )
+        
+        # 轉發給 n8n 的 LLM 分析工作流
+        payload = {
+            'source': 'llm_fallback',
+            'workflow': 'llm_intent_analyzer',  # n8n 中的 LLM 分析工作流
+            'user_id': user_id,
+            'message_text': message_text,
+            'reply_token': reply_token,  # n8n 可以用這個回覆用戶
+            'timestamp': datetime.now().isoformat(),
+            'processing_type': 'llm_analysis'
+        }
+        
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    N8N_WEBHOOK_URL,
+                    json=payload,
+                    headers={'Content-Type': 'application/json'}
+                ) as response:
+                    result = await response.text()
+                    print(f"已轉發給 n8n LLM 分析: {response.status}")
+                    return {'handled': True, 'forwarded_to_n8n': True}
+        except Exception as e:
+            print(f"轉發到 n8n 失敗: {e}")
+            # 發送錯誤訊息
+            line_bot_api.push_message(
+                user_id,
+                TextSendMessage(text="抱歉，系統暫時無法處理您的請求，請稍後再試。")
+            )
+            return {'handled': False, 'error': str(e)}
+    
+    # --- 具體指令處理方法 ---
+    
+    async def handle_form_command(self, user_id, reply_token):
+        """處理填表指令"""
+        if user_id:
+            print(f"發送 Flex Message 給 {user_id}")
+            send_flex_reply_message(reply_token, user_id)
+        else:
+            line_bot_api.reply_message(
+                reply_token,
+                TextSendMessage(text="請先加為好友後再使用此功能")
+            )
+    
+    async def handle_image_command(self, user_id, prompt, reply_token):
+        """處理畫圖指令"""
         if prompt:
             print(f"收到畫圖指令: {prompt}")
             line_bot_api.reply_message(
                 reply_token,
                 TextSendMessage(text="好的，您的圖片正在生成中，預計將透過 Email 傳送給您。")
             )
-            # 將任務發送給 n8n 處理
-            send_task_to_n8n(user_id, prompt)
+            await self.trigger_n8n_workflow('image_generation', {
+                'prompt': prompt,
+                'user_id': user_id
+            })
         else:
             line_bot_api.reply_message(
                 reply_token,
                 TextSendMessage(text="請提供繪圖提示詞，例如：/畫圖 一隻飛翔的龍")
             )
-    elif message_text == "關你屁事":
+    
+    async def handle_rss_command(self, user_id, url, reply_token):
+        """處理RSS分析指令"""
+        if url:
+            line_bot_api.reply_message(
+                reply_token,
+                TextSendMessage(text=f"正在分析 RSS: {url}")
+            )
+            await self.trigger_n8n_workflow('rss_analysis', {
+                'url': url,
+                'user_id': user_id
+            })
+        else:
+            line_bot_api.reply_message(
+                reply_token,
+                TextSendMessage(text="請提供 RSS 網址，例如：/分析RSS https://example.com/rss")
+            )
+    
+    async def handle_status_command(self, user_id, reply_token):
+        """處理狀態查詢指令"""
         line_bot_api.reply_message(
             reply_token,
-            TextSendMessage(text="我知道了!")
+            TextSendMessage(text="正在查詢您的任務狀態...")
+        )
+        await self.trigger_n8n_workflow('status_query', {
+            'user_id': user_id
+        })
+    
+    async def handle_help_command(self, reply_token):
+        """處理說明指令"""
+        help_text = """
+🤖 可用功能說明：
+
+📝 表單相關：
+• /填表 - 開始填寫表單
+• "我要填表單" - 自然語言方式
+
+🎨 圖片生成：
+• /畫圖 [描述] - 生成圖片
+• "幫我畫一張..." - 自然語言方式
+
+📊 RSS 分析：
+• /分析RSS [網址] - 分析RSS訂閱源
+• "分析這個RSS" - 自然語言方式
+
+📈 狀態查詢：
+• /查詢狀態 - 查看任務進度
+• "我的任務狀態" - 自然語言方式
+
+💡 您也可以直接用自然語言描述需求，我會盡力理解並協助您！
+"""
+        line_bot_api.reply_message(
+            reply_token,
+            TextSendMessage(text=help_text)
+        )
+    
+    # --- 輔助方法 ---
+    
+    async def trigger_n8n_workflow(self, workflow_type, params):
+        """觸發 n8n 工作流"""
+        payload = {
+            'source': 'unified_processor',
+            'workflow': workflow_type,
+            'timestamp': datetime.now().isoformat(),
+            **params
+        }
+        
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    N8N_WEBHOOK_URL,
+                    json=payload,
+                    headers={'Content-Type': 'application/json'}
+                ) as response:
+                    result = await response.text()
+                    print(f"n8n 工作流觸發成功: {response.status}, {result}")
+                    return True
+        except Exception as e:
+            print(f"觸發 n8n 工作流失敗: {e}")
+            return False
+    
+    # --- 回應方法 ---
+    
+    async def send_unknown_command_response(self, reply_token, command):
+        line_bot_api.reply_message(
+            reply_token,
+            TextSendMessage(text=f"未知指令：{command}\n\n請輸入 /說明 查看可用功能")
+        )
+    
+    async def send_error_response(self, reply_token, error_msg):
+        line_bot_api.reply_message(
+            reply_token,
+            TextSendMessage(text="處理您的請求時發生錯誤，請稍後再試。")
         )
 
-# 處理 Postback 事件 (用戶點擊 Flex Message 中的按鈕)
+# 創建全局處理器實例
+message_processor = UnifiedMessageProcessor()
+
+# --- Webhook 入口點 ---
+@app.route("/callback", methods=['POST'])
+def callback():
+    signature = request.headers['X-Line-Signature']
+    body = request.get_data(as_text=True)
+
+    try:
+        handler.handle(body, signature)
+    except InvalidSignatureError:
+        print("Invalid signature. Please check your channel access token/channel secret.")
+        abort(400)
+    
+    return 'OK'
+
+# --- LINE 事件處理 ---
+
+@handler.add(MessageEvent, message=TextMessage)
+def handle_message(event):
+    user_id = event.source.user_id
+    message_text = event.message.text
+    reply_token = event.reply_token
+
+    print(f"收到 User ID: {user_id} 的訊息: {message_text}")
+
+    # 使用統一處理器
+    try:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(
+            message_processor.process_message(user_id, message_text, reply_token)
+        )
+        loop.close()
+    except Exception as e:
+        print(f"處理訊息時發生錯誤: {e}")
+        line_bot_api.reply_message(
+            reply_token,
+            TextSendMessage(text="抱歉，處理您的訊息時發生錯誤，請稍後再試。")
+        )
+
 @handler.add(PostbackEvent)
 def handle_postback(event):
     user_id = event.source.user_id
@@ -106,15 +388,25 @@ def handle_postback(event):
     
     print(f"收到 User ID: {user_id} 的 Postback: {postback_data}")
     
-    # 在這裡處理來自 Flex Message 的交互邏輯
-    line_bot_api.reply_message(
-        reply_token,
-        TextSendMessage(text=f"您選擇了: {postback_data} (範例回覆，請替換實際邏輯)")
-    )
+    if postback_data in ['confirm_task', 'cancel_task']:
+        if postback_data == 'confirm_task':
+            line_bot_api.reply_message(
+                reply_token,
+                TextSendMessage(text="任務已確認，正在處理中...")
+            )
+        else:
+            line_bot_api.reply_message(
+                reply_token,
+                TextSendMessage(text="任務已取消")
+            )
+    else:
+        line_bot_api.reply_message(
+            reply_token,
+            TextSendMessage(text=f"您選擇了: {postback_data}")
+        )
 
 # --- 輔助函式 ---
 
-# 發送 Flex Message (使用 Reply API)
 def send_flex_reply_message(reply_token, user_id):
     flex_message_contents = {
         "type": "bubble",
@@ -175,35 +467,11 @@ def send_flex_reply_message(reply_token, user_id):
         FlexSendMessage(alt_text="選擇進稿類別", contents=flex_message_contents)
     )
 
-# 發送任務給 n8n
-def send_task_to_n8n(user_id, prompt):
-    import requests # 在這裡才導入，因為它不是 linebot library 的一部分
-    try:
-        payload = {
-            "line_user_id": user_id,
-            "prompt": prompt,
-            "callback_url": f"https://{request.host}/n8n-callback" # 如果 n8n 需要回調您的 Bot
-        }
-        headers = { "Content-Type": "application/json" }
-        # 請確保 N8N_WEBHOOK_URL 已在 Cloud Run 環境變數中設定
-        response = requests.post(N8N_WEBHOOK_URL, data=json.dumps(payload), headers=headers)
-        print(f"Task sent to n8n successfully. Status: {response.status_code}, Response: {response.text}")
-    except Exception as e:
-        print(f"Failed to send task to n8n: {e}")
-
-# **注意:** Cloud Run 服務會自動找到在應用程式內部定義的 Flask 應用程式實例 'app'。
-#     您不需要在 'if __name__ == "__main__":' 區塊中運行 app.run()，
-#     因為 Cloud Run 會使用 Gunicorn 或類似的 WSGI 伺服器來啟動您的應用程式。
-#     這裡的 main.py 檔案名稱是約定俗成的，但您可以改為 app.py 或其他，只要在 Dockerfile 中指定正確。
-#     如果沒有 Dockerfile，Cloud Run 會預設找到 main.py 中的 Flask 應用。
-
-# 本地測試用的程式碼，在部署到 Cloud Run 時會被忽略
 if __name__ == "__main__":
-    # 確認環境變數是否已正確載入
     print(f"LINE_CHANNEL_ACCESS_TOKEN: {'已設定' if LINE_CHANNEL_ACCESS_TOKEN else '未設定'}")
     print(f"LINE_CHANNEL_SECRET: {'已設定' if LINE_CHANNEL_SECRET else '未設定'}")
     print(f"N8N_WEBHOOK_URL: {'已設定' if N8N_WEBHOOK_URL else '未設定'}")
+    print(f"DIALOGFLOW_PROJECT_ID: {'已設定' if DIALOGFLOW_PROJECT_ID else '未設定'}")
     
-    # 啟動 Flask 應用程式
     print("啟動本地 Flask 伺服器...")
     app.run(host='0.0.0.0', port=8080, debug=True)

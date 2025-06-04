@@ -4,3 +4,5 @@ requests
 gunicorn
 google-cloud-firestore
 python-dotenv
+aiohttp
+google-cloud-dialogflow

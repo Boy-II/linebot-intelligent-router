@@ -1,25 +1,25 @@
-# 使用官方 Python 基礎映像
-FROM python:3.9-slim-buster
+# 使用官方的 Python runtime 作為基礎映像
+FROM python:3.9-slim
 
 # 設定工作目錄
 WORKDIR /app
 
-# 將 requirements.txt 複製到工作目錄
-COPY requirements.txt .
+# 複製 requirements 文件
+COPY requirements_optimized.txt .
 
-# 安裝所有 Python 依賴
-RUN pip install --no-cache-dir -r requirements.txt
+# 安裝 Python 依賴
+RUN pip install --no-cache-dir -r requirements_optimized.txt
 
-# 將應用程式程式碼複製到工作目錄
-COPY . .
+# 複製應用程式代碼
+COPY main_optimized.py .
+COPY dialogflow_client.py .
 
-# 設定環境變數 PORT。Cloud Run 會注入這個變數來告訴容器監聽哪個端口。
-# Gunicorn 將會監聽這個端口。
-ENV PORT 8080
+# 設定環境變數
+ENV PYTHONUNBUFFERED=1
+ENV FLASK_APP=main_optimized.py
 
-# 運行 Gunicorn 作為生產級的 WSGI 伺服器
-# --bind :$PORT 告訴 Gunicorn 監聽所有網路接口的 $PORT
-# --workers 1 每個 worker 都處理一個並發請求
-# --threads 8 允許每個 worker 處理多個並發請求
-# main:app 告訴 Gunicorn 從 main.py 檔案中找到名為 'app' 的 Flask 應用程式實例
-CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 main:app
+# 暴露端口
+EXPOSE 8080
+
+# 設定啟動命令
+CMD exec gunicorn --bind :8080 --workers 1 --threads 8 --timeout 0 main_optimized:app

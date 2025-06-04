@@ -1,0 +1,40 @@
+# Zeabur 優化版 Dockerfile
+FROM python:3.9-slim
+
+WORKDIR /app
+
+# 安裝系統依賴
+RUN apt-get update && apt-get install -y \
+    curl \
+    postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
+# 複製 requirements 文件
+COPY requirements.txt .
+
+# 安裝 Python 依賴
+RUN pip install --no-cache-dir -r requirements.txt
+
+# 複製應用程式代碼
+COPY main.py .
+COPY user_manager.py .
+COPY dialogflow_client.py .
+COPY models.py .
+
+# 複製 Dialogflow 憑證
+COPY credentials/ /app/credentials/
+
+# 創建應用用戶
+RUN useradd --create-home --shell /bin/bash app \
+    && chown -R app:app /app
+USER app
+
+# 暴露端口
+EXPOSE 8080
+
+# 健康檢查
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8080/health || exit 1
+
+# Zeabur 優化的啟動命令
+CMD exec gunicorn --bind 0.0.0.0:8080 --workers 1 --threads 8 --timeout 120 --keep-alive 2 main:app

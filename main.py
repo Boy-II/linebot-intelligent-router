@@ -467,6 +467,40 @@ def send_flex_reply_message(reply_token, user_id):
         FlexSendMessage(alt_text="選擇進稿類別", contents=flex_message_contents)
     )
 
+# 添加健康檢查端點
+@app.route("/health", methods=['GET'])
+def health_check():
+    """健康檢查端點"""
+    try:
+        # 檢查資料庫連接
+        from models import test_connection
+        db_status = test_connection()
+        
+        # 檢查 n8n 連接
+        n8n_status = False
+        try:
+            import requests
+            response = requests.get(f"{N8N_WEBHOOK_URL.replace('/webhook/line-bot-unified', '')}/healthz", timeout=5)
+            n8n_status = response.status_code == 200
+        except:
+            pass
+        
+        health_data = {
+            "status": "healthy" if db_status else "unhealthy",
+            "timestamp": datetime.now().isoformat(),
+            "services": {
+                "database": "connected" if db_status else "disconnected",
+                "n8n": "connected" if n8n_status else "disconnected",
+                "dialogflow": "configured" if DIALOGFLOW_PROJECT_ID else "not_configured"
+            },
+            "version": "1.0.0"
+        }
+        
+        return health_data, 200 if db_status else 503
+        
+    except Exception as e:
+        return {"status": "error", "message": str(e)}, 500
+
 if __name__ == "__main__":
     print(f"LINE_CHANNEL_ACCESS_TOKEN: {'已設定' if LINE_CHANNEL_ACCESS_TOKEN else '未設定'}")
     print(f"LINE_CHANNEL_SECRET: {'已設定' if LINE_CHANNEL_SECRET else '未設定'}")

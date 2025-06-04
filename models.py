@@ -35,4 +35,15 @@ def get_db():
     try:
         yield db
     finally:
-        db.close() 
+        db.close()
+
+def test_connection():
+    """測試數據庫連接"""
+    try:
+        with engine.connect() as conn:
+            conn.execute("SELECT 1")
+        print("✅ 資料庫連接成功")
+        return True
+    except Exception as e:
+        print(f"❌ 資料庫連接失敗: {e}")
+        return False 

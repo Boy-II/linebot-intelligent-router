@@ -1,0 +1,96 @@
+# Zeabur 三服務部署配置
+# 請按照以下順序在 Zeabur 中部署服務
+
+# =================================
+# 1. PostgreSQL 服務配置
+# =================================
+# 服務名稱: postgresql
+# 鏡像: postgres:15-alpine
+# 端口: 5432 (內部)
+
+# PostgreSQL 環境變數:
+POSTGRES_DB=postgres
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=your_strong_password_here
+POSTGRES_HOST_AUTH_METHOD=scram-sha-256
+POSTGRES_INITDB_ARGS=--auth-host=scram-sha-256
+
+# =================================
+# 2. n8n 服務配置
+# =================================
+# 服務名稱: n8n
+# 鏡像: n8nio/n8n:latest
+# 端口: 5678 (外部可訪問)
+# 域名: https://bwen8n.zeabur.app
+
+# n8n 環境變數:
+N8N_BASIC_AUTH_ACTIVE=true
+N8N_BASIC_AUTH_USER=admin
+N8N_BASIC_AUTH_PASSWORD=your_n8n_admin_password
+N8N_HOST=0.0.0.0
+N8N_PORT=5678
+N8N_PROTOCOL=https
+WEBHOOK_URL=https://bwen8n.zeabur.app/
+
+# n8n 資料庫連接:
+N8N_DATABASE_TYPE=postgresdb
+N8N_DATABASE_HOST=postgresql.zeabur.internal
+N8N_DATABASE_PORT=5432
+N8N_DATABASE_DB=postgres
+N8N_DATABASE_USER=postgres
+N8N_DATABASE_PASSWORD=your_strong_password_here
+
+# n8n 安全設定:
+N8N_ENCRYPTION_KEY=your_32_character_encryption_key_here
+
+# OpenAI 整合 (僅 n8n 需要):
+OPENAI_API_KEY=your_openai_api_key_for_n8n_workflows
+
+# =================================
+# 3. LineBot Webhook 服務配置
+# =================================
+# 服務名稱: linebot
+# 建構: 從 GitHub 或本地代碼
+# 端口: 8080 (外部可訪問)
+# 域名: https://your-linebot.zeabur.app
+
+# LineBot 環境變數:
+LINE_CHANNEL_ACCESS_TOKEN=SdE0KOU24scOJ7pNilYs7JXWMlPLPiAfa8UYAOjHUHeQI0dlkVIWube3/ZpkoW/txIf7G2e1bYKm0uR5yw175A9xQY4/72u1VPipcE78PdQd4lsbyL25b7DOedkk1P9c0Ts78rTLmIgPUtwRep6gfQdB04t89/1O/w1cDnyilFU=
+LINE_CHANNEL_SECRET=c1f557f98afe402e8e829a9cf2e39dd4
+
+# 資料庫連接:
+DATABASE_URL=postgresql://postgres:your_strong_password_here@postgresql.zeabur.internal:5432/postgres
+
+# n8n 整合:
+N8N_WEBHOOK_URL=https://bwen8n.zeabur.app/webhook/line-bot-unified
+
+# Dialogflow 整合 (可選):
+DIALOGFLOW_PROJECT_ID=bwe-line-webhook
+GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/bwe-line-webhook-c841c3ee149.json
+
+# 應用設定:
+BOT_NAME=assistant
+LOG_LEVEL=INFO
+PYTHONUNBUFFERED=1
+
+# =================================
+# 部署後設定檢查清單
+# =================================
+# 1. 檢查 PostgreSQL 服務狀態
+# 2. 登入 n8n 管理介面 (https://bwen8n.zeabur.app)
+# 3. 匯入工作流配置
+# 4. 測試 LineBot webhook (https://your-linebot.zeabur.app/health)
+# 5. 設定 LINE Developer Console webhook URL
+# 6. 測試 LINE Bot 功能
+
+# =================================
+# 服務間通信
+# =================================
+# PostgreSQL -> 內部: postgresql.zeabur.internal:5432
+# n8n -> 外部: https://bwen8n.zeabur.app
+# LineBot -> 外部: https://your-linebot.zeabur.app
+# 
+# 資料流向:
+# LINE 用戶 -> LineBot Webhook -> n8n 工作流 -> PostgreSQL
+#                               -> OpenAI (在 n8n 中)
+#                               -> 回覆用戶

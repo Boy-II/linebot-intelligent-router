@@ -6,3 +6,6 @@ google-cloud-firestore
 python-dotenv
 aiohttp
 google-cloud-dialogflow
+psycopg2-binary
+SQLAlchemy
+alembic

@@ -16,6 +16,7 @@ COPY models.py .
 COPY user_manager.py .
 COPY dialogflow_client.py .
 COPY google_credentials.py .
+COPY version.txt .
 
 # 複製啟動腳本
 COPY start.sh .

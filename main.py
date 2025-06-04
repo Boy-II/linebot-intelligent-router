@@ -490,7 +490,10 @@ def handle_message(event):
     print(f"收到 User ID: {user_id} 的訊息: {message_text}")
 
     # 定義允許未註冊用戶使用的指令
-    allowed_unregistered_commands = ['/health', '/健康檢查', '/說明', '/幫助']
+    allowed_unregistered_commands = [
+        '/health', '/健康檢查', '/說明', '/幫助',
+        '/畫圖', '/分析RSS', '/查詢狀態', '/取消任務'
+    ]
 
     # 檢查用戶是否已註冊
     from user_manager import UserManager  # 導入 UserManager

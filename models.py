@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, String, DateTime, JSON, Integer
+from sqlalchemy import create_engine, Column, String, DateTime, JSON, Integer, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime
@@ -55,13 +55,13 @@ try:
     
     # 檢查表是否存在
     with engine.connect() as conn:
-        result = conn.execute("""
+        result = conn.execute(text("""
             SELECT table_name 
             FROM information_schema.tables 
             WHERE table_schema = 'public' 
             AND (table_name LIKE 'line_%' OR table_name LIKE 'user_%')
             ORDER BY table_name
-        """)
+        """))
         tables = [row[0] for row in result]
         print(f"✅ 發現 LineBot 相關表: {tables}")
 except Exception as e:
@@ -82,7 +82,7 @@ def test_connection():
     """測試數據庫連接"""
     try:
         with engine.connect() as conn:
-            conn.execute("SELECT 1")
+            conn.execute(text("SELECT 1"))
         print("✅ 資料庫連接成功")
         return True
     except Exception as e:

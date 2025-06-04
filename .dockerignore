@@ -17,5 +17,10 @@ README.md
 .venv
 data/
 backups_manual/
+backup-dockerfiles/
 deploy.sh
 docker-compose*.yml
+credentials/
+*.json
+zeabur.yaml
+zeabur-deployment-config.txt

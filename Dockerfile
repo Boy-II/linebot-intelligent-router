@@ -18,6 +18,9 @@ COPY dialogflow_client.py .
 COPY google_credentials.py .
 COPY version.txt .
 
+# 複製 registerUI 資料夾
+COPY registerUI ./registerUI/
+
 # 複製啟動腳本
 COPY start.sh .
 RUN chmod +x start.sh

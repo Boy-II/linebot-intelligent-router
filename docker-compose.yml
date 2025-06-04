@@ -1,0 +1,94 @@
+version: '3.8'
+
+services:
+  linebot:
+    build: .
+    container_name: linebot-app
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      # LINE Bot 配置
+      - LINE_CHANNEL_ACCESS_TOKEN=${LINE_CHANNEL_ACCESS_TOKEN}
+      - LINE_CHANNEL_SECRET=${LINE_CHANNEL_SECRET}
+      
+      # n8n 配置
+      - N8N_WEBHOOK_URL=${N8N_WEBHOOK_URL}
+      
+      # Bot 配置
+      - BOT_NAME=${BOT_NAME:-assistant}
+      
+      # Dialogflow 配置（可選）
+      - DIALOGFLOW_PROJECT_ID=${DIALOGFLOW_PROJECT_ID}
+      - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
+      
+      # 數據持久化配置
+      - DATA_DIR=/app/data
+      - BACKUP_INTERVAL_HOURS=${BACKUP_INTERVAL_HOURS:-24}
+      
+      # 日誌配置
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      
+    volumes:
+      # 數據持久化 Volume
+      - linebot_data:/app/data
+      
+      # 如果使用 Google Service Account，需要mount credential文件
+      # - ./credentials:/app/credentials:ro
+      
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    # 資源限制
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+    
+    # 日誌配置
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # 可選：添加 n8n 服務（如果在同一個 docker-compose 中）
+  # n8n:
+  #   image: n8nio/n8n:latest
+  #   container_name: n8n-app
+  #   restart: unless-stopped
+  #   ports:
+  #     - "5678:5678"
+  #   environment:
+  #     - N8N_BASIC_AUTH_ACTIVE=true
+  #     - N8N_BASIC_AUTH_USER=${N8N_USER}
+  #     - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD}
+  #   volumes:
+  #     - n8n_data:/home/node/.n8n
+  #   depends_on:
+  #     - linebot
+
+# Named volumes for data persistence
+volumes:
+  linebot_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PWD}/data
+  
+  # n8n_data:
+  #   driver: local
+
+# Networks (可選)
+networks:
+  default:
+    name: linebot-network

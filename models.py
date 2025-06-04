@@ -13,8 +13,12 @@ class User(Base):
     __tablename__ = 'line_users'
 
     line_id = Column(String, primary_key=True)
-    name = Column(String)
-    email = Column(String, unique=True, index=True)
+    name = Column(String)  # 姓名，限制最多5個中文字元
+    english_name = Column(String)  # 英文名
+    department = Column(String)  # 單位
+    email = Column(String, unique=True, index=True)  # 電子郵件
+    mobile = Column(String)  # 行動電話，09開頭的10位數字
+    extension = Column(String)  # 分機號碼，#加上3-4位數字
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     user_metadata = Column(JSON)  # 改名避免保留字衝突

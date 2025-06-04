@@ -34,15 +34,20 @@ class UserManager:
         finally:
             db.close()
 
-    def add_user(self, line_id: str, name: str, email: str, **kwargs) -> bool:
+    def add_user(self, line_id: str, name: str, english_name: str, department: str,
+                 email: str, mobile: str, extension: str, **kwargs) -> bool:
         """新增用戶"""
         try:
             with self._get_db() as db:
                 user = User(
                     line_id=line_id,
                     name=name,
+                    english_name=english_name,
+                    department=department,
                     email=email,
-                    metadata=kwargs
+                    mobile=mobile,
+                    extension=extension,
+                    user_metadata=kwargs
                 )
                 db.add(user)
                 db.commit()
@@ -61,8 +66,12 @@ class UserManager:
                     return {
                         'line_id': user.line_id,
                         'name': user.name,
+                        'english_name': user.english_name,
+                        'department': user.department,
                         'email': user.email,
-                        **user.metadata
+                        'mobile': user.mobile,
+                        'extension': user.extension,
+                        **(user.user_metadata or {})
                     }
                 return None
         except SQLAlchemyError as e:
@@ -78,8 +87,12 @@ class UserManager:
                     return {
                         'line_id': user.line_id,
                         'name': user.name,
+                        'english_name': user.english_name,
+                        'department': user.department,
                         'email': user.email,
-                        **user.metadata
+                        'mobile': user.mobile,
+                        'extension': user.extension,
+                        **(user.user_metadata or {})
                     }
                 return None
         except SQLAlchemyError as e:
@@ -95,8 +108,12 @@ class UserManager:
                     return {
                         'line_id': user.line_id,
                         'name': user.name,
+                        'english_name': user.english_name,
+                        'department': user.department,
                         'email': user.email,
-                        **user.metadata
+                        'mobile': user.mobile,
+                        'extension': user.extension,
+                        **(user.user_metadata or {})
                     }
                 return None
         except SQLAlchemyError as e:
@@ -114,13 +131,21 @@ class UserManager:
                 # 更新基本欄位
                 if 'name' in kwargs:
                     user.name = kwargs.pop('name')
+                if 'english_name' in kwargs:
+                    user.english_name = kwargs.pop('english_name')
+                if 'department' in kwargs:
+                    user.department = kwargs.pop('department')
                 if 'email' in kwargs:
                     user.email = kwargs.pop('email')
+                if 'mobile' in kwargs:
+                    user.mobile = kwargs.pop('mobile')
+                if 'extension' in kwargs:
+                    user.extension = kwargs.pop('extension')
 
                 # 更新其他元數據
-                if user.metadata is None:
-                    user.metadata = {}
-                user.metadata.update(kwargs)
+                if user.user_metadata is None:
+                    user.user_metadata = {}
+                user.user_metadata.update(kwargs)
                 
                 db.commit()
                 self.logger.info(f"已更新用戶: {line_id}")
@@ -185,8 +210,12 @@ class UserManager:
                 return [{
                     'line_id': user.line_id,
                     'name': user.name,
+                    'english_name': user.english_name,
+                    'department': user.department,
                     'email': user.email,
-                    **user.metadata
+                    'mobile': user.mobile,
+                    'extension': user.extension,
+                    **(user.user_metadata or {})
                 } for user in users]
         except SQLAlchemyError as e:
             self.logger.error(f"獲取所有用戶失敗: {e}")

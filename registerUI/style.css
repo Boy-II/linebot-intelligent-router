@@ -1,0 +1,236 @@
+body {
+    font-family: 'Arial', sans-serif;
+    margin: 0;
+    padding: 20px;
+    background-color: #e0e5ec;
+    color: #555;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+}
+
+h1 {
+    color: #1E3A8A;
+    text-align: center;
+    margin-bottom: 30px;
+    font-weight: 300;
+    font-size: 2.5em;
+}
+
+form {
+    margin-top: 20px;
+    width: 100%;
+    max-width: 800px;
+    background-color: #e0e5ec;
+    padding: 20px;
+    border-radius: 20px;
+}
+
+table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    background-color: transparent;
+    box-shadow: none;
+}
+
+thead {
+    position: absolute;
+    top: -9999px;
+    left: -9999px;
+}
+
+tr {
+    display: block;
+    background-color: #e0e5ec;
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 
+        -6px -6px 12px #ffffff,
+        6px 6px 12px #bec3c9;
+    margin-bottom: 25px;
+}
+
+tr:last-child {
+    margin-bottom: 0;
+}
+
+td {
+    display: block;
+    border: none;
+    padding: 0;
+    text-align: left;
+    margin-bottom: 15px;
+}
+
+td:last-child {
+    margin-bottom: 0;
+}
+
+td::before {
+    content: attr(data-label);
+    display: block;
+    width: 100%;
+    white-space: normal;
+    text-align: left;
+    font-weight: 600;
+    color: #1E3A8A;
+    margin-bottom: 8px;
+    font-size: 0.9em;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="tel"],
+select,
+textarea {
+    width: 100%;
+    padding: 15px 20px;
+    margin: 0;
+    border: none;
+    border-radius: 20px;
+    box-sizing: border-box;
+    background-color: #e0e5ec;
+    color: #555;
+    font-size: 1em;
+    box-shadow:
+        inset 5px 5px 8px #bec3c9,
+        inset -5px -5px 8px #ffffff;
+    outline: none;
+}
+
+input[type="text"]::placeholder,
+input[type="email"]::placeholder,
+input[type="tel"]::placeholder,
+textarea::placeholder {
+    color: #8a99ab;
+}
+
+/* 電子郵件輸入框樣式 */
+.email-input-container {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    background-color: #e0e5ec;
+    border-radius: 20px;
+    box-shadow:
+        inset 5px 5px 8px #bec3c9,
+        inset -5px -5px 8px #ffffff;
+    padding: 0;
+    overflow: hidden;
+}
+
+.email-input-container input[type="text"] {
+    flex: 1;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    padding: 15px 10px 15px 20px;
+    margin: 0;
+    min-width: 0;
+}
+
+.email-domain {
+    color: #555;
+    font-size: 1em;
+    padding: 15px 20px 15px 0;
+    white-space: nowrap;
+    background: transparent;
+}
+
+/* 格式提示樣式 */
+.format-hint {
+    display: block;
+    color: #8a99ab;
+    font-size: 0.8em;
+    margin-top: 5px;
+    padding-left: 5px;
+}
+
+button[type="submit"] {
+    background-color: #1E3A8A;
+    color: #ffffff;
+    padding: 15px 30px;
+    margin-top: 30px;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 1.1em;
+    font-weight: 600;
+    box-shadow: 
+        -5px -5px 10px #ffffff,
+        5px 5px 10px #bec3c9;
+    transition: all 0.2s ease-in-out;
+    display: block;
+    width: auto;
+    min-width: 200px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+button[type="submit"]:hover {
+    background-color: #2563EB;
+    box-shadow: 
+        -2px -2px 5px #ffffff,
+        2px 2px 5px #bec3c9;
+}
+
+button[type="submit"]:active {
+    box-shadow: 
+        inset 2px 2px 5px #1E40AF,
+        inset -2px -2px 5px #3B82F6;
+    background-color: #1E40AF;
+}
+
+.success-message {
+    background-color: #10B981;
+    color: white;
+    padding: 15px;
+    border-radius: 10px;
+    margin-top: 20px;
+    text-align: center;
+    display: none;
+}
+
+.error-message {
+    background-color: #EF4444;
+    color: white;
+    padding: 15px;
+    border-radius: 10px;
+    margin-top: 20px;
+    text-align: center;
+    display: none;
+}
+
+@media screen and (max-width: 480px) {
+    body {
+        padding: 10px;
+    }
+    h1 {
+        font-size: 1.8em;
+        margin-bottom: 20px;
+    }
+    form {
+        padding: 15px;
+        border-radius: 15px;
+    }
+    tr {
+        padding: 15px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+    }
+    input[type="text"],
+    input[type="email"],
+    input[type="tel"],
+    select,
+    textarea {
+        padding: 12px 15px;
+        border-radius: 15px;
+    }
+    button[type="submit"] {
+        padding: 12px 25px;
+        font-size: 1em;
+        min-width: 160px;
+    }
+}

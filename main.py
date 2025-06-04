@@ -62,7 +62,8 @@ class UnifiedMessageProcessor:
             '/說明': 'help',
             '/幫助': 'help',
             '/health': 'health_check',
-            '/健康檢查': 'health_check'
+            '/健康檢查': 'health_check',
+            '/註冊': 'registration'
         }
         
     async def process_message(self, user_id, message_text, reply_token):
@@ -107,6 +108,8 @@ class UnifiedMessageProcessor:
                 return await self.handle_help_command(reply_token)
             elif command_type == 'health_check':
                 return await self.handle_health_command(user_id, reply_token)
+            elif command_type == 'registration':
+                return await self.handle_registration_command(user_id, reply_token)
             else:
                 return await self.trigger_n8n_workflow('direct_command', {
                     'command': command,
@@ -315,6 +318,11 @@ class UnifiedMessageProcessor:
             TextSendMessage(text=help_text)
         )
     
+    async def handle_registration_command(self, user_id, reply_token):
+        """處理註冊指令"""
+        print(f"用戶 {user_id} 請求註冊")
+        send_registration_flex_message(reply_token, user_id)
+        
     async def handle_health_command(self, user_id, reply_token):
         """處理健康檢查指令"""
         try:
@@ -489,10 +497,9 @@ def handle_message(event):
 
     print(f"收到 User ID: {user_id} 的訊息: {message_text}")
 
-    # 定義允許未註冊用戶使用的指令
+    # 定義允許未註冊用戶使用的指令（健康檢查和註冊）
     allowed_unregistered_commands = [
-        '/health', '/健康檢查', '/說明', '/幫助',
-        '/畫圖', '/分析RSS', '/查詢狀態', '/取消任務'
+        '/health', '/健康檢查', '/註冊'
     ]
 
     # 檢查用戶是否已註冊
@@ -503,13 +510,20 @@ def handle_message(event):
     # 提取指令部分進行比較
     command_part = message_text.split(' ')[0]
 
+    # 如果用戶未註冊且不是允許的指令，優先引導用戶註冊
     if not is_registered and command_part not in allowed_unregistered_commands:
         print(f"用戶 {user_id} 尚未註冊 ({is_registered=}) 且指令 '{command_part}' 非公開允許，發送註冊引導訊息。")
-        # 引導用戶註冊
+        # 引導用戶註冊（使用新的註冊 Flex 訊息）
+        send_registration_flex_message(reply_token, user_id)
+        return # 結束處理
+    
+    # 如果用戶輸入的是 "/填表" 或 "/填表單"，則發送填表 Flex 訊息
+    if command_part in ['/填表', '/填表單']:
+        print(f"用戶 {user_id} 請求填表，發送填表 Flex 訊息。")
         send_flex_reply_message(reply_token, user_id)
         return # 結束處理
     
-    print(f"用戶 {user_id} 狀態: {'已註冊' if is_registered else '未註冊但指令允許'}。繼續處理指令 '{message_text}'。")
+    print(f"用戶 {user_id} 狀態: {'已註冊' if is_registered else '未註冊但指令允許'}。繼續處理訊息 '{message_text}'。")
 
     # 使用統一處理器
     try:
@@ -611,6 +625,116 @@ def send_flex_reply_message(reply_token, user_id):
     line_bot_api.reply_message(
         reply_token,
         FlexSendMessage(alt_text="選擇進稿類別", contents=flex_message_contents)
+    )
+
+def send_registration_flex_message(reply_token, user_id):
+    """發送用戶註冊的 Flex 訊息"""
+    flex_message_contents = {
+        "type": "bubble",
+        "hero": {
+            "type": "image",
+            "url": "https://bwctaiwan.com/cozeta/wp-content/uploads/2025/03/register.png",
+            "size": "full",
+            "aspectRatio": "20:13",
+            "aspectMode": "cover"
+        },
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                {
+                    "type": "text",
+                    "text": "📝 用戶註冊",
+                    "weight": "bold",
+                    "size": "xl",
+                    "align": "center",
+                    "color": "#1E3A8AFF"
+                },
+                {
+                    "type": "text",
+                    "text": "請完成註冊以使用更多功能",
+                    "size": "sm",
+                    "color": "#6B7280FF",
+                    "align": "center",
+                    "wrap": True,
+                    "margin": "md"
+                },
+                {
+                    "type": "box",
+                    "layout": "vertical",
+                    "margin": "lg",
+                    "spacing": "sm",
+                    "contents": [
+                        {
+                            "type": "button",
+                            "style": "primary",
+                            "color": "#1E3A8AFF",
+                            "action": {
+                                "type": "uri",
+                                "label": "👤 立即註冊",
+                                "uri": f"https://bweline.zeabur.app/registerUI/index.html?userId={user_id}"
+                            },
+                            "height": "sm"
+                        }
+                    ]
+                },
+                {
+                    "type": "box",
+                    "layout": "vertical",
+                    "margin": "lg",
+                    "contents": [
+                        {
+                            "type": "text",
+                            "text": "註冊後即可使用以下功能：",
+                            "size": "xs",
+                            "color": "#6B7280FF"
+                        },
+                        {
+                            "type": "text",
+                            "text": "• 自然語言對話",
+                            "size": "xs",
+                            "color": "#6B7280FF",
+                            "margin": "sm"
+                        },
+                        {
+                            "type": "text",
+                            "text": "• 填寫表單",
+                            "size": "xs",
+                            "color": "#6B7280FF"
+                        },
+                        {
+                            "type": "text",
+                            "text": "• 圖片生成",
+                            "size": "xs",
+                            "color": "#6B7280FF"
+                        },
+                        {
+                            "type": "text",
+                            "text": "• RSS 分析",
+                            "size": "xs",
+                            "color": "#6B7280FF"
+                        }
+                    ]
+                }
+            ]
+        },
+        "footer": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                {
+                    "type": "text",
+                    "text": "如有問題請聯繫客服",
+                    "size": "xs",
+                    "color": "#6B7280FF",
+                    "align": "center"
+                }
+            ]
+        }
+    }
+    line_bot_api.reply_message(
+        reply_token,
+        FlexSendMessage(alt_text="用戶註冊", contents=flex_message_contents)
     )
 
 # 添加健康檢查端點

@@ -88,7 +88,22 @@ docker run -p 8080:8080 \
 *   **環境變數設定**: [`ENV_SETUP_README.md`](ENV_SETUP_README.md:1)
 *   **Google Credentials 設定**: [`google_credentials.py`](google_credentials.py:1) 相關說明及 [`ENVIRONMENT_CONFIG_GUIDE.md`](ENVIRONMENT_CONFIG_GUIDE.md:1)
 
-## 💡 未來可擴展方向
+## 📋 版本更新日誌
+
+### v0.0.7 (2025/6/5)
+* **新增用戶註冊表單**：
+  * 創建了新的註冊表單，替代原有的 Typeform
+  * 表單欄位包括：姓名、英文名、單位、電子郵件、行動電話、分機號碼
+  * 姓名限制最多 5 個中文字元
+  * 電子郵件鎖定為 @bwnet.com.tw 域名
+  * 行動電話格式為 09 開頭的 10 位數字
+  * 分機號碼格式為 # 加上 3-4 位數字
+
+* **資料庫模型更新**：
+  * 在 User 模型中添加了新欄位：english_name、department、mobile、extension
+  * 更新了用戶管理類，支持新增的欄位
+
+## � 未來可擴展方向
 
 *   更精細的上下文管理。
 *   用戶身份驗證與授權。

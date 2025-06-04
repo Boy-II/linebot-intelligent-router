@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用戶註冊</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>用戶註冊</h1>
+    <form id="registerForm">
+        <table>
+            <thead>
+                <tr>
+                    <th>姓名</th>
+                    <th>英文名</th>
+                    <th>單位</th>
+                    <th>電子郵件</th>
+                    <th>行動電話</th>
+                    <th>分機號碼</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td data-label="姓名">
+                        <input type="text" name="name" placeholder="請輸入您的姓名 (最多5個中文字)" maxlength="10" required>
+                        <small class="format-hint">最多5個中文字元</small>
+                    </td>
+                    <td data-label="英文名">
+                        <input type="text" name="english_name" placeholder="請輸入您的英文名" required>
+                    </td>
+                    <td data-label="單位">
+                        <select name="department" required>
+                            <option value="">請選擇單位</option>
+                            <option value="專案經理">生活事業處 │ 專案經理</option>
+                            <option value="內容策展組">生活事業處 │ 內容策展組</option>
+                            <option value="良醫行銷組">生活事業處 │ 良醫行銷組</option>
+                            <option value="良醫編輯組">生活事業處 │ 良醫編輯組</option>
+                            <option value="行銷企劃組">生活事業處 │ 行銷企劃組</option>
+                            <option value="視覺設計組">生活事業處 │ 視覺設計組</option>
+                        </select>
+                    </td>
+                    <td data-label="電子郵件">
+                        <div class="email-input-container">
+                            <input type="text" name="email_prefix" placeholder="請輸入電子郵件前綴" required>
+                            <span class="email-domain">@bwnet.com.tw</span>
+                            <input type="hidden" name="email" id="full_email">
+                        </div>
+                    </td>
+                    <td data-label="行動電話">
+                        <input type="tel" name="mobile" placeholder="09XXXXXXXX" pattern="09\d{8}" required>
+                        <small class="format-hint">格式: 09開頭的10位數字</small>
+                    </td>
+                    <td data-label="分機號碼">
+                        <input type="text" name="extension" placeholder="#XXXX" pattern="#\d{3,4}" required>
+                        <small class="format-hint">格式: #加上4位數字</small>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        <input type="hidden" name="timestamp" id="timestamp">
+        <input type="hidden" name="line_id" id="line_id">
+        <button type="submit">完成註冊</button>
+    </form>
+    <script src="script.js"></script>
+</body>
+</html>

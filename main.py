@@ -813,6 +813,54 @@ def health_check():
     except Exception as e:
         return {"status": "error", "message": str(e)}, 500
 
+# --- API 端點 ---
+@app.route("/api/register", methods=['POST'])
+def api_register_user():
+    try:
+        data = request.get_json()
+        if not data:
+            return {"status": "error", "message": "無效的請求數據"}, 400
+
+        line_id = data.get('line_id')
+        name = data.get('name')
+        english_name = data.get('english_name')
+        department = data.get('department')
+        email = data.get('email')
+        mobile = data.get('mobile')
+        extension = data.get('extension')
+
+        # 簡單驗證
+        if not all([line_id, name, english_name, department, email, mobile, extension]):
+            return {"status": "error", "message": "缺少必要的欄位"}, 400
+
+        from user_manager import UserManager
+        user_manager_instance = UserManager()
+
+        if user_manager_instance.get_user_by_line_id(line_id):
+            return {"status": "error", "message": "此 LINE ID 已註冊"}, 409
+        
+        if user_manager_instance.get_user_by_email(email):
+            return {"status": "error", "message": "此電子郵件已註冊"}, 409
+
+        success = user_manager_instance.add_user(
+            line_id=line_id,
+            name=name,
+            english_name=english_name,
+            department=department,
+            email=email,
+            mobile=mobile,
+            extension=extension
+        )
+
+        if success:
+            return {"status": "success", "message": "用戶註冊成功"}, 201
+        else:
+            return {"status": "error", "message": "用戶註冊失敗，請稍後再試"}, 500
+
+    except Exception as e:
+        print(f"註冊 API 錯誤: {e}")
+        return {"status": "error", "message": str(e)}, 500
+
 if __name__ == "__main__":
     print(f"LINE_CHANNEL_ACCESS_TOKEN: {'已設定' if LINE_CHANNEL_ACCESS_TOKEN else '未設定'}")
     print(f"LINE_CHANNEL_SECRET: {'已設定' if LINE_CHANNEL_SECRET else '未設定'}")

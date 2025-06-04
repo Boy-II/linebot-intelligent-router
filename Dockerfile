@@ -25,8 +25,9 @@ RUN mkdir -p /app/data/users \
 COPY main.py .
 COPY user_manager.py .
 
-# 複製 Dialogflow 客戶端（如果存在）
-COPY dialogflow_client.py . 2>/dev/null || echo "No dialogflow_client.py found"
+# 複製 Dialogflow 客戶端和憑證
+COPY dialogflow_client.py .
+COPY credentials/ /app/credentials/
 
 # 複製初始數據文件（如果存在）
 COPY data/users/users.json /app/data/users/users.json 2>/dev/null || echo "No initial users.json found"
@@ -36,6 +37,7 @@ ENV PYTHONUNBUFFERED=1
 ENV FLASK_APP=main.py
 ENV DATA_DIR=/app/data
 ENV PYTHONPATH=/app
+ENV GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/bwe-line-webhook-c841c3ee149.json
 
 # 創建非root用戶
 RUN useradd --create-home --shell /bin/bash app \

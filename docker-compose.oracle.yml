@@ -18,9 +18,9 @@ services:
       # Bot 配置
       - BOT_NAME=${BOT_NAME:-assistant}
       
-      # Dialogflow 配置
+      # Dialogflow 配置（可選）
       - DIALOGFLOW_PROJECT_ID=${DIALOGFLOW_PROJECT_ID}
-      - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/bwe-line-webhook-c841c3ee149.json
+      - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS}
       
       # 數據持久化配置
       - DATA_DIR=/app/data
@@ -29,36 +29,40 @@ services:
       # 日誌配置
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       
+      # 網路配置
+      - WEBHOOK_TIMEOUT=${WEBHOOK_TIMEOUT:-30}
+      - MAX_RETRY_ATTEMPTS=${MAX_RETRY_ATTEMPTS:-3}
+      
     volumes:
       # 數據持久化 Volume
       - ./data:/app/data
       
-      # Dialogflow 憑證 Volume (只讀)
-      - ./credentials:/app/credentials:ro
+      # 如果使用 Google Service Account，需要mount credential文件
+      # - ./credentials:/app/credentials:ro
       
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-    
-    # 資源限制
+    # 甲骨文雲 1C1V 優化配置
     deploy:
       resources:
         limits:
-          memory: 512M
-          cpus: '0.5'
+          memory: 450M        # 保守記憶體限制，給系統留空間
+          cpus: '0.8'         # 保留 CPU 給系統
         reservations:
-          memory: 256M
-          cpus: '0.25'
+          memory: 200M        # 最低保證記憶體
+          cpus: '0.2'         # 最低保證 CPU
     
-    # 日誌配置
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 60s           # 延長間隔減少資源消耗
+      timeout: 15s
+      retries: 3
+      start_period: 45s       # 給容器更多啟動時間
+    
+    # 甲骨文雲日誌優化
     logging:
       driver: "json-file"
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: "5m"        # 減小日誌文件大小
+        max-file: "2"         # 減少日誌文件數量
 
 # Named volumes for data persistence
 volumes:
@@ -69,7 +73,7 @@ volumes:
       o: bind
       device: ${PWD}/data
 
-# Networks (可選)
+# Networks
 networks:
   default:
     name: linebot-network

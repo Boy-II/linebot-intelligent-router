@@ -35,6 +35,16 @@ env/
 .env.staging
 .env.enhanced
 .env.optimized
+.env.zeabur
+
+# Environment Configuration Documentation (包含敏感資訊)
+ENVIRONMENT_CONFIG_GUIDE.md
+env-config-guide.md
+config-secrets.md
+deployment-secrets.md
+
+# Deployment guides with sensitive info
+ZEABUR_DEPLOYMENT_GUIDE.md
 
 # IDE
 .vscode/
@@ -117,3 +127,7 @@ local.properties
 output/
 tmp/
 temp/
+
+# Backup directories
+backup-dockerfiles/
+backups_manual/

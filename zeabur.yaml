@@ -1,0 +1,51 @@
+# Zeabur 專案模板配置
+# 保存為 zeabur.yaml (可選，用於自動化部署)
+
+name: linebot-system
+services:
+  postgresql:
+    source:
+      image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - 5432
+    
+  n8n:
+    source:
+      image: n8nio/n8n:latest
+    environment:
+      N8N_BASIC_AUTH_ACTIVE: true
+      N8N_BASIC_AUTH_USER: admin
+      N8N_BASIC_AUTH_PASSWORD: ${N8N_PASSWORD}
+      N8N_DATABASE_TYPE: postgresdb
+      N8N_DATABASE_HOST: postgresql.zeabur.internal
+      N8N_DATABASE_PORT: 5432
+      N8N_DATABASE_DB: postgres
+      N8N_DATABASE_USER: postgres
+      N8N_DATABASE_PASSWORD: ${POSTGRES_PASSWORD}
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+    ports:
+      - 5678
+    depends_on:
+      - postgresql
+      
+  linebot:
+    source:
+      git:
+        repo: your-github-repo
+        branch: main
+    environment:
+      LINE_CHANNEL_ACCESS_TOKEN: ${LINE_CHANNEL_ACCESS_TOKEN}
+      LINE_CHANNEL_SECRET: ${LINE_CHANNEL_SECRET}
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@postgresql.zeabur.internal:5432/postgres
+      N8N_WEBHOOK_URL: https://${ZEABUR_WEB_URL}/webhook/line-bot-unified
+      DIALOGFLOW_PROJECT_ID: bwe-line-webhook
+    ports:
+      - 8080
+    depends_on:
+      - postgresql
+      - n8n

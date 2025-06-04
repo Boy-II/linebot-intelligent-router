@@ -7,6 +7,18 @@ from datetime import datetime
 from dotenv import load_dotenv
 load_dotenv()
 
+# 導入憑證處理模組
+from google_credentials import setup_google_credentials
+
+# 在應用程式啟動時設定憑證
+print("🔧 正在設定 Google 憑證...")
+credentials_ready = setup_google_credentials()
+
+if not credentials_ready:
+    print("⚠️ Google 憑證設定失敗，Dialogflow 功能可能無法正常工作")
+else:
+    print("✅ Google 憑證設定成功！")
+
 from flask import Flask, request, abort  # 導入 Flask 模組
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
@@ -48,7 +60,9 @@ class UnifiedMessageProcessor:
             '/查詢狀態': 'status_query',
             '/取消任務': 'cancel_task',
             '/說明': 'help',
-            '/幫助': 'help'
+            '/幫助': 'help',
+            '/health': 'health_check',
+            '/健康檢查': 'health_check'
         }
         
     async def process_message(self, user_id, message_text, reply_token):
@@ -91,6 +105,8 @@ class UnifiedMessageProcessor:
                 return await self.handle_status_command(user_id, reply_token)
             elif command_type == 'help':
                 return await self.handle_help_command(reply_token)
+            elif command_type == 'health_check':
+                return await self.handle_health_command(user_id, reply_token)
             else:
                 return await self.trigger_n8n_workflow('direct_command', {
                     'command': command,
@@ -298,6 +314,63 @@ class UnifiedMessageProcessor:
             reply_token,
             TextSendMessage(text=help_text)
         )
+    
+    async def handle_health_command(self, user_id, reply_token):
+        """處理健康檢查指令"""
+        try:
+            # 檢查資料庫連接
+            from models import test_connection
+            db_status = test_connection()
+            
+            # 檢查 n8n 連接
+            n8n_status = False
+            n8n_error = None
+            try:
+                import requests
+                response = requests.get(f"{N8N_WEBHOOK_URL.replace('/webhook/line-bot-unified', '')}/healthz", timeout=5)
+                n8n_status = response.status_code == 200
+            except Exception as e:
+                n8n_error = str(e)
+            
+            # 檢查 Dialogflow 配置
+            dialogflow_status = bool(DIALOGFLOW_PROJECT_ID)
+            
+            # 獲取系統資訊
+            try:
+                import psutil
+                import platform
+                
+                # 獲取記憶體使用情況
+                memory = psutil.virtual_memory()
+                memory_percent = memory.percent
+                
+                # 獲取 CPU 使用率
+                cpu_percent = psutil.cpu_percent(interval=1)
+                
+                system_info = f"• CPU 使用率: {cpu_percent:.1f}%\n• 記憶體使用: {memory_percent:.1f}%\n• Python 版本: {platform.python_version()}"
+            except ImportError:
+                system_info = "• 系統資訊不可用 (psutil 未安裝)"
+            
+            # 獲取當前時間
+            from datetime import datetime
+            current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            
+            status_emoji = "🟢" if db_status and n8n_status else "🟡" if db_status or n8n_status else "🔴"
+            
+            health_report = f"""{status_emoji} **LineBot 系統狀態報告**\n\n🕰️ **檢查時間**: {current_time}\n\n📊 **服務狀態**:\n• 資料庫: {"✅ 連接正常" if db_status else "❌ 連接失敗"}\n• n8n 工作流: {"✅ 連接正常" if n8n_status else f"❌ 連接失敗"}\n• Dialogflow: {"✅ 已配置" if dialogflow_status else "⚠️ 未配置"}\n\n💻 **系統資訊**:\n{system_info}\n\n🔗 **服務端點**:\n• Webhook: /callback\n• 健康檢查: /health\n• n8n 整合: {'Ready' if n8n_status else 'Error'}\n\n📊 **用戶資訊**:\n• 用戶 ID: {user_id[:10]}...\n• 系統版本: v1.0.0
+"""
+            
+            line_bot_api.reply_message(
+                reply_token,
+                TextSendMessage(text=health_report)
+            )
+            
+        except Exception as e:
+            error_msg = f"🚫 健康檢查失敗\n\n錯誤訊息: {str(e)[:100]}..."
+            line_bot_api.reply_message(
+                reply_token,
+                TextSendMessage(text=error_msg)
+            )
     
     # --- 輔助方法 ---
     

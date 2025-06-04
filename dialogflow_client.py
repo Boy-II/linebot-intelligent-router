@@ -7,23 +7,33 @@ import os
 import json
 from typing import Dict, Any, Optional
 from google.cloud import dialogflow
+from google_credentials import get_google_credentials, get_project_id
 
 
 class DialogflowClient:
     def __init__(self, project_id: str = None, language_code: str = 'zh-TW'):
-        self.project_id = project_id or os.environ.get('DIALOGFLOW_PROJECT_ID')
+        self.project_id = project_id or get_project_id() or os.environ.get('DIALOGFLOW_PROJECT_ID')
         self.language_code = language_code
         self.session_client = None
+        self.credentials = get_google_credentials()
         
-        if self.project_id:
+        if self.project_id and self.credentials:
             try:
-                self.session_client = dialogflow.SessionsClient()
-                print(f"Dialogflow 客戶端初始化成功，項目ID: {self.project_id}")
+                self.session_client = dialogflow.SessionsClient(credentials=self.credentials)
+                print(f"✅ Dialogflow 客戶端初始化成功，項目ID: {self.project_id}")
             except Exception as e:
-                print(f"Dialogflow 初始化失敗: {e}")
+                print(f"❌ Dialogflow 初始化失敗: {e}")
+                self.session_client = None
+        elif self.project_id:
+            try:
+                # 嘗試使用預設憑證
+                self.session_client = dialogflow.SessionsClient()
+                print(f"✅ Dialogflow 客戶端使用預設憑證初始化成功，項目ID: {self.project_id}")
+            except Exception as e:
+                print(f"❌ Dialogflow 預設憑證初始化失敗: {e}")
                 self.session_client = None
         else:
-            print("未設定 DIALOGFLOW_PROJECT_ID，將使用模擬模式")
+            print("⚠️ 未設定 DIALOGFLOW_PROJECT_ID 或 Google 憑證，將使用模擬模式")
     
     async def detect_intent(self, text: str, session_id: str, context: Dict = None) -> Dict[str, Any]:
         """檢測用戶意圖"""

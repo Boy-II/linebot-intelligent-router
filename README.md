@@ -6,7 +6,6 @@
 
 =======
 ### ❌ **原設計問題**
->>>>>>> 6ac53e466a95edc0da92e1a4d174410e2f8ceb11
 ```
 用戶 → LINE Platform → Flask (指令解析/Dialogflow) → n8n (LLM/業務邏輯) → 回應
                              ↑                                  ↑

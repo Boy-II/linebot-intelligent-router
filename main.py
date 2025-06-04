@@ -19,7 +19,7 @@ if not credentials_ready:
 else:
     print("✅ Google 憑證設定成功！")
 
-from flask import Flask, request, abort  # 導入 Flask 模組
+from flask import Flask, request, abort, send_from_directory # 導入 Flask 模組
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import (
@@ -736,6 +736,11 @@ def send_registration_flex_message(reply_token, user_id):
         reply_token,
         FlexSendMessage(alt_text="用戶註冊", contents=flex_message_contents)
     )
+
+# --- 靜態文件路由 ---
+@app.route('/registerUI/<path:filename>')
+def serve_register_ui(filename):
+    return send_from_directory('registerUI', filename)
 
 # 添加健康檢查端點
 @app.route("/health", methods=['GET'])

@@ -373,14 +373,17 @@ class UnifiedMessageProcessor:
             # 讀取版本號
             version = "未知"
             try:
-                with open("version.txt", "r") as f:
+                # 獲取當前腳本的目錄
+                current_dir = os.path.dirname(os.path.abspath(__file__))
+                version_file_path = os.path.join(current_dir, "version.txt")
+                with open(version_file_path, "r") as f:
                     version_content = f.read().strip()
                     if version_content.startswith("version="):
                         version = version_content.split("=")[1]
                     else:
                         version = version_content # 向下相容舊格式
             except FileNotFoundError:
-                version = "version.txt 未找到"
+                version = f"version.txt 未找到於 {version_file_path}"
             except Exception as e:
                 version = f"讀取版本錯誤: {e}"
 
@@ -648,14 +651,19 @@ def health_check():
         # 讀取版本號
         version_val = "未知"
         try:
-            with open("version.txt", "r") as f:
+            # 獲取當前腳本的目錄
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            version_file_path = os.path.join(current_dir, "version.txt")
+            with open(version_file_path, "r") as f:
                 version_content = f.read().strip()
                 if version_content.startswith("version="):
                     version_val = version_content.split("=")[1]
                 else:
                     version_val = version_content
-        except Exception:
-            pass # 保持 API 穩定，版本號讀取失敗不影響健康檢查主要狀態
+        except FileNotFoundError:
+            version_val = f"version.txt 未找到於 {version_file_path}" # 在 API 回應中也提供路徑
+        except Exception as e:
+            version_val = f"讀取版本錯誤: {e}" # 也記錄其他讀取錯誤
 
         health_data = {
             "status": "healthy" if db_status and n8n_status else "unhealthy", # 整體健康狀態取決於主要服務

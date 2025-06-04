@@ -324,14 +324,34 @@ class UnifiedMessageProcessor:
             
             # 檢查 n8n 連接
             n8n_status = False
-            n8n_error = None
+            n8n_error_detail = "未知錯誤"
             try:
                 import requests
-                response = requests.get(f"{N8N_WEBHOOK_URL.replace('/webhook/line-bot-unified', '')}/healthz", timeout=5)
-                n8n_status = response.status_code == 200
+                if N8N_WEBHOOK_URL:
+                    base_n8n_url_parts = N8N_WEBHOOK_URL.split('/')
+                    if len(base_n8n_url_parts) >= 3:
+                        base_n8n_url = f"{base_n8n_url_parts[0]}//{base_n8n_url_parts[2]}"
+                        health_check_url = f"{base_n8n_url}/healthz"
+                        print(f"嘗試檢查 n8n 健康狀態於: {health_check_url}")
+                        response = requests.get(health_check_url, timeout=10) # 增加 timeout
+                        if response.status_code == 200:
+                            n8n_status = True
+                            n8n_error_detail = "連接正常"
+                        else:
+                            n8n_error_detail = f"狀態碼: {response.status_code}, 回應: {response.text[:100]}"
+                    else:
+                        n8n_error_detail = "N8N_WEBHOOK_URL 格式不正確，無法推斷健康檢查端點"
+                else:
+                    n8n_error_detail = "N8N_WEBHOOK_URL 未設定"
+            except requests.exceptions.Timeout:
+                n8n_error_detail = "請求超時 (10秒)"
+            except requests.exceptions.ConnectionError as e:
+                n8n_error_detail = f"連接錯誤: {str(e)[:100]}"
+            except requests.exceptions.RequestException as e:
+                n8n_error_detail = f"請求錯誤: {str(e)[:100]}"
             except Exception as e:
-                n8n_error = str(e)
-            
+                n8n_error_detail = f"其他錯誤: {str(e)[:100]}"
+
             # 檢查 Dialogflow 配置
             dialogflow_status = bool(DIALOGFLOW_PROJECT_ID)
             
@@ -340,24 +360,52 @@ class UnifiedMessageProcessor:
                 import psutil
                 import platform
                 
-                # 獲取記憶體使用情況
                 memory = psutil.virtual_memory()
                 memory_percent = memory.percent
-                
-                # 獲取 CPU 使用率
                 cpu_percent = psutil.cpu_percent(interval=1)
-                
                 system_info = f"• CPU 使用率: {cpu_percent:.1f}%\n• 記憶體使用: {memory_percent:.1f}%\n• Python 版本: {platform.python_version()}"
             except ImportError:
                 system_info = "• 系統資訊不可用 (psutil 未安裝)"
             
             # 獲取當前時間
-            from datetime import datetime
             current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             
-            status_emoji = "🟢" if db_status and n8n_status else "🟡" if db_status or n8n_status else "🔴"
+            # 讀取版本號
+            version = "未知"
+            try:
+                with open("version.txt", "r") as f:
+                    version_content = f.read().strip()
+                    if version_content.startswith("version="):
+                        version = version_content.split("=")[1]
+                    else:
+                        version = version_content # 向下相容舊格式
+            except FileNotFoundError:
+                version = "version.txt 未找到"
+            except Exception as e:
+                version = f"讀取版本錯誤: {e}"
+
+            status_emoji = "🟢" if db_status and n8n_status and dialogflow_status else "🟡" if db_status or n8n_status or dialogflow_status else "🔴"
             
-            health_report = f"""{status_emoji} **LineBot 系統狀態報告**\n\n🕰️ **檢查時間**: {current_time}\n\n📊 **服務狀態**:\n• 資料庫: {"✅ 連接正常" if db_status else "❌ 連接失敗"}\n• n8n 工作流: {"✅ 連接正常" if n8n_status else f"❌ 連接失敗"}\n• Dialogflow: {"✅ 已配置" if dialogflow_status else "⚠️ 未配置"}\n\n💻 **系統資訊**:\n{system_info}\n\n🔗 **服務端點**:\n• Webhook: /callback\n• 健康檢查: /health\n• n8n 整合: {'Ready' if n8n_status else 'Error'}\n\n📊 **用戶資訊**:\n• 用戶 ID: {user_id[:10]}...\n• 系統版本: v1.0.0
+            health_report = f"""{status_emoji} **LineBot 系統狀態報告**
+
+🕰️ **檢查時間**: {current_time}
+🏷️ **系統版本**: {version}
+
+📊 **服務狀態**:
+• 資料庫: {"✅ 連接正常" if db_status else "❌ 連接失敗"}
+• n8n 工作流: {"✅ 連接正常" if n8n_status else f"❌ 連接失敗 ({n8n_error_detail})"}
+• Dialogflow: {"✅ 已配置" if dialogflow_status else "⚠️ 未配置"}
+
+💻 **系統資訊**:
+{system_info}
+
+🔗 **服務端點**:
+• Webhook: /callback
+• 健康檢查: /health
+• n8n 整合: {'Ready' if n8n_status else f'Error ({n8n_error_detail})'}
+
+📊 **用戶資訊**:
+• 用戶 ID: {user_id[:10]}...
 """
             
             line_bot_api.reply_message(
@@ -437,6 +485,16 @@ def handle_message(event):
     reply_token = event.reply_token
 
     print(f"收到 User ID: {user_id} 的訊息: {message_text}")
+
+    # 檢查用戶是否已註冊
+    from user_manager import UserManager  # 導入 UserManager
+    user_manager_instance = UserManager() # 創建 UserManager 實例
+    if not user_manager_instance.is_registered_user(user_id):
+        print(f"用戶 {user_id} 尚未註冊，發送註冊引導訊息。")
+        # 引導用戶註冊，可以發送一個 Flex Message 或 TextMessage
+        # 這裡我們使用類似填表指令的 Flex Message
+        send_flex_reply_message(reply_token, user_id) # 直接使用現有的 send_flex_reply_message
+        return # 結束處理，等待用戶透過 Flex Message 進行操作
 
     # 使用統一處理器
     try:
@@ -551,25 +609,57 @@ def health_check():
         
         # 檢查 n8n 連接
         n8n_status = False
+        n8n_connection_detail = "未知錯誤"
         try:
             import requests
-            response = requests.get(f"{N8N_WEBHOOK_URL.replace('/webhook/line-bot-unified', '')}/healthz", timeout=5)
-            n8n_status = response.status_code == 200
-        except:
-            pass
-        
+            if N8N_WEBHOOK_URL:
+                base_n8n_url_parts = N8N_WEBHOOK_URL.split('/')
+                if len(base_n8n_url_parts) >= 3:
+                    base_n8n_url = f"{base_n8n_url_parts[0]}//{base_n8n_url_parts[2]}"
+                    health_check_url = f"{base_n8n_url}/healthz"
+                    response = requests.get(health_check_url, timeout=10) # 增加 timeout
+                    if response.status_code == 200:
+                        n8n_status = True
+                        n8n_connection_detail = "connected"
+                    else:
+                        n8n_connection_detail = f"disconnected (status: {response.status_code}, body: {response.text[:50]})"
+                else:
+                    n8n_connection_detail = "disconnected (invalid N8N_WEBHOOK_URL format)"
+            else:
+                n8n_connection_detail = "disconnected (N8N_WEBHOOK_URL not set)"
+        except requests.exceptions.Timeout:
+            n8n_connection_detail = "disconnected (request timeout)"
+        except requests.exceptions.ConnectionError as e:
+            n8n_connection_detail = f"disconnected (connection error: {str(e)[:50]})"
+        except requests.exceptions.RequestException as e:
+            n8n_connection_detail = f"disconnected (request error: {str(e)[:50]})"
+        except Exception as e:
+            n8n_connection_detail = f"disconnected (unknown error: {str(e)[:50]})"
+
+        # 讀取版本號
+        version_val = "未知"
+        try:
+            with open("version.txt", "r") as f:
+                version_content = f.read().strip()
+                if version_content.startswith("version="):
+                    version_val = version_content.split("=")[1]
+                else:
+                    version_val = version_content
+        except Exception:
+            pass # 保持 API 穩定，版本號讀取失敗不影響健康檢查主要狀態
+
         health_data = {
-            "status": "healthy" if db_status else "unhealthy",
+            "status": "healthy" if db_status and n8n_status else "unhealthy", # 整體健康狀態取決於主要服務
             "timestamp": datetime.now().isoformat(),
             "services": {
                 "database": "connected" if db_status else "disconnected",
-                "n8n": "connected" if n8n_status else "disconnected",
+                "n8n": n8n_connection_detail,
                 "dialogflow": "configured" if DIALOGFLOW_PROJECT_ID else "not_configured"
             },
-            "version": "1.0.0"
+            "version": version_val
         }
         
-        return health_data, 200 if db_status else 503
+        return health_data, 200 if db_status and n8n_status else 503
         
     except Exception as e:
         return {"status": "error", "message": str(e)}, 500

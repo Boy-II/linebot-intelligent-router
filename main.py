@@ -486,15 +486,24 @@ def handle_message(event):
 
     print(f"收到 User ID: {user_id} 的訊息: {message_text}")
 
+    # 定義允許未註冊用戶使用的指令
+    allowed_unregistered_commands = ['/health', '/健康檢查', '/說明', '/幫助']
+
     # 檢查用戶是否已註冊
     from user_manager import UserManager  # 導入 UserManager
     user_manager_instance = UserManager() # 創建 UserManager 實例
-    if not user_manager_instance.is_registered_user(user_id):
-        print(f"用戶 {user_id} 尚未註冊，發送註冊引導訊息。")
-        # 引導用戶註冊，可以發送一個 Flex Message 或 TextMessage
-        # 這裡我們使用類似填表指令的 Flex Message
-        send_flex_reply_message(reply_token, user_id) # 直接使用現有的 send_flex_reply_message
-        return # 結束處理，等待用戶透過 Flex Message 進行操作
+    
+    is_registered = user_manager_instance.is_registered_user(user_id)
+    # 提取指令部分進行比較
+    command_part = message_text.split(' ')[0]
+
+    if not is_registered and command_part not in allowed_unregistered_commands:
+        print(f"用戶 {user_id} 尚未註冊 ({is_registered=}) 且指令 '{command_part}' 非公開允許，發送註冊引導訊息。")
+        # 引導用戶註冊
+        send_flex_reply_message(reply_token, user_id)
+        return # 結束處理
+    
+    print(f"用戶 {user_id} 狀態: {'已註冊' if is_registered else '未註冊但指令允許'}。繼續處理指令 '{message_text}'。")
 
     # 使用統一處理器
     try:

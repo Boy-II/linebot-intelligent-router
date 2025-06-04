@@ -1,0 +1,21 @@
+# Zeabur .dockerignore
+.git
+.gitignore
+.vscode
+.kilocode
+.DS_Store
+__pycache__
+.pytest_cache
+*.pyc
+*.pyo
+*.pyd
+.env.local
+.env.development
+.env.test
+README.md
+*.md
+.venv
+data/
+backups_manual/
+deploy.sh
+docker-compose*.yml

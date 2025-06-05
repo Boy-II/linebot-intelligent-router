@@ -1,3 +1,7 @@
+#Line Push 免費戶限制BOT 每月僅200則。因此不再更新linbot路由。
+#改使用Discord Bot延續開發。https://github.com/Boy-II/Discord-Bot
+
+
 # LINE Bot 智能路由系統 - 視覺設計組
 
 本專案是一個多層級 LINE Bot 智能路由系統，旨在高效處理用戶指令和自然語言查詢。採用 Flask 進行輕量級路由與指令解析，並將複雜的自然語言理解 (NLU) 及業務邏輯（如 LLM 調用）委派給 n8n 工作流。

@@ -46,7 +46,19 @@ class UserTask(Base):
     completed_at = Column(DateTime)
 
 # 資料庫連接設定
-DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://postgres:postgres@postgresql.zeabur.internal:5432/postgres')
+# 加強環境變數處理，防止變數污染
+DATABASE_URL = os.getenv('DATABASE_URL')
+if not DATABASE_URL:
+    DATABASE_URL = 'postgresql://postgres:postgres@postgresql.zeabur.internal:5432/postgres'
+    print("⚠️ DATABASE_URL 環境變數未設定，使用預設值")
+
+# 清理可能的環境變數污染
+DATABASE_URL = DATABASE_URL.strip()
+if '=' in DATABASE_URL and not DATABASE_URL.startswith('postgresql'):
+    print(f"❌ 發現 DATABASE_URL 格式異常: {DATABASE_URL}")
+    DATABASE_URL = 'postgresql://postgres:postgres@postgresql.zeabur.internal:5432/postgres'
+    print("✅ 使用預設資料庫 URL")
+
 print(f"連接資料庫: {DATABASE_URL.replace(':', ':*****@', 1) if '@' in DATABASE_URL else DATABASE_URL}")
 
 engine = create_engine(DATABASE_URL)

@@ -200,11 +200,7 @@ class UnifiedMessageProcessor:
     async def forward_to_n8n_for_llm_analysis(self, user_id, message_text, reply_token):
         """轉發給 n8n 進行 LLM 分析和處理"""
         
-        # 先回覆用戶表示正在處理
-        line_bot_api.reply_message(
-            reply_token,
-            TextSendMessage(text="正在分析您的需求，請稍候...")
-        )
+        # 不立即回覆，保留 reply_token 給 n8n 使用
         
         # 轉發給 n8n 的 LLM 分析工作流
         payload = {

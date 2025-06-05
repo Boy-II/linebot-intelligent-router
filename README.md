@@ -1,5 +1,4 @@
-#Line Push 免費戶限制BOT 每月僅200則。因此不再更新linbot路由。
-#改使用Discord Bot延續開發。https://github.com/Boy-II/Discord-Bot
+#Line Push 免費戶限制BOT 每月僅200則。因此不再更新linbot路由。改使用Discord Bot延續開發。https://github.com/Boy-II/Discord-Bot
 
 
 # LINE Bot 智能路由系統 - 視覺設計組

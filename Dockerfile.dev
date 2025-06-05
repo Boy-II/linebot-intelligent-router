@@ -1,4 +1,4 @@
-# Zeabur 生產版本 Dockerfile
+# 開發環境 Dockerfile - 包含所有測試工具
 FROM python:3.9-slim
 
 WORKDIR /app
@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 複製 Python 文件
+# 複製所有 Python 文件（包含測試工具）
 COPY main.py .
 COPY models.py .
 COPY user_manager.py .
@@ -18,8 +18,16 @@ COPY dialogflow_client.py .
 COPY google_credentials.py .
 COPY version.txt .
 
-# 複製新增的核心配置文件（生產環境必需）
+# 複製核心配置文件
 COPY bot_config.py .
+
+# 複製測試和檢查工具
+COPY test_group_behavior.py .
+COPY test_timezone.py .
+COPY test_database.py .
+COPY test_dialogflow.py .
+COPY check_environment.py .
+COPY verify_all_fixes.py .
 
 # 複製 registerUI 資料夾
 COPY registerUI ./registerUI/
@@ -28,11 +36,12 @@ COPY registerUI ./registerUI/
 COPY start.sh .
 RUN chmod +x start.sh
 
-# 創建憑證目錄（但不複製實際憑證檔案）
+# 創建憑證目錄
 RUN mkdir -p /app/credentials
 
 # 設定環境變數
 ENV PYTHONUNBUFFERED=1
+ENV DEVELOPMENT_MODE=true
 
 # 創建用戶
 RUN useradd -m app && chown -R app:app /app
@@ -45,5 +54,5 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
     CMD curl -f http://localhost:8080/health || exit 1
 
-# 使用啟動腳本
-CMD ["./start.sh"]
+# 開發環境默認命令 - 先運行驗證然後啟動服務
+CMD ["sh", "-c", "python verify_all_fixes.py && ./start.sh"]

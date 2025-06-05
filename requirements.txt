@@ -12,3 +12,4 @@ alembic>=1.11.0
 psutil>=5.9.0
 google-auth>=2.20.0
 google-oauth2-tool>=0.0.3
+pytz>=2023.3

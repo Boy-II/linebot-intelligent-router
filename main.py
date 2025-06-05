@@ -2,10 +2,14 @@ import os
 import json
 import asyncio
 import aiohttp
-from datetime import datetime
+from datetime import datetime, timezone
+import pytz  # 添加 pytz 用於時區處理
 # 在檔案開頭載入環境變數
 from dotenv import load_dotenv
 load_dotenv()
+
+# 設定台北時區
+TAIPEI_TZ = pytz.timezone('Asia/Taipei')
 
 # 導入憑證處理模組
 from google_credentials import setup_google_credentials
@@ -209,7 +213,7 @@ class UnifiedMessageProcessor:
             'user_id': user_id,
             'message_text': message_text,
             'reply_token': reply_token,  # n8n 可以用這個回覆用戶
-            'timestamp': datetime.now().isoformat(),
+            'timestamp': datetime.now(TAIPEI_TZ).isoformat(),
             'processing_type': 'llm_analysis'
         }
         
@@ -375,8 +379,8 @@ class UnifiedMessageProcessor:
             except ImportError:
                 system_info = "• 系統資訊不可用 (psutil 未安裝)"
             
-            # 獲取當前時間
-            current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            # 獲取當前時間（台北時區）
+            current_time = datetime.now(TAIPEI_TZ).strftime('%Y-%m-%d %H:%M:%S %Z')
             
             # 讀取版本號
             version = "未知"
@@ -438,7 +442,7 @@ class UnifiedMessageProcessor:
         payload = {
             'source': 'unified_processor',
             'workflow': workflow_type,
-            'timestamp': datetime.now().isoformat(),
+            'timestamp': datetime.now(TAIPEI_TZ).isoformat(),
             **params
         }
         
@@ -489,18 +493,36 @@ def callback():
 
 # --- LINE 事件處理 ---
 
+# 導入 bot 配置
+from bot_config import bot_config
+
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     user_id = event.source.user_id
     message_text = event.message.text
     reply_token = event.reply_token
-
-    print(f"收到 User ID: {user_id} 的訊息: {message_text}")
-
-    # 定義允許未註冊用戶使用的指令（健康檢查和註冊）
-    allowed_unregistered_commands = [
-        '/health', '/健康檢查', '/註冊'
-    ]
+    
+    # 獲取訊息來源類型和群組 ID
+    source_type = event.source.type  # 'user', 'group', 'room'
+    group_id = getattr(event.source, 'group_id', None) if source_type == 'group' else None
+    room_id = getattr(event.source, 'room_id', None) if source_type == 'room' else None
+    
+    print(f"收到來自 {source_type} 的訊息 - User ID: {user_id}, Group/Room ID: {group_id or room_id}, 訊息: {message_text}")
+    
+    # 處理群組/聊天室訊息：只有在被 mention 或特定指令時才回應
+    if source_type in ['group', 'room']:
+        if not bot_config.should_respond_in_group(message_text):
+            print(f"群組訊息未滿足回應條件，忽略處理: {message_text}")
+            return  # 不處理不符合條件的群組訊息
+        
+        # 移除 mention 標記以便後續處理
+        original_message = message_text
+        message_text = bot_config.remove_mention(message_text)
+        
+        if original_message != message_text:
+            print(f"群組中被 mention，處理訊息: '{original_message}' -> '{message_text}'")
+        else:
+            print(f"群組中使用允許指令: {message_text}")
 
     # 檢查用戶是否已註冊
     from user_manager import UserManager  # 導入 UserManager
@@ -511,10 +533,17 @@ def handle_message(event):
     command_part = message_text.split(' ')[0]
 
     # 如果用戶未註冊且不是允許的指令，優先引導用戶註冊
-    if not is_registered and command_part not in allowed_unregistered_commands:
-        print(f"用戶 {user_id} 尚未註冊 ({is_registered=}) 且指令 '{command_part}' 非公開允許，發送註冊引導訊息。")
-        # 引導用戶註冊（使用新的註冊 Flex 訊息）
-        send_registration_flex_message(reply_token, user_id)
+    # 但在群組中不主動發送註冊訊息，避免打擾其他成員
+    if not is_registered and not bot_config.is_unregistered_allowed_command(command_part):
+        if source_type == 'user':  # 只在一對一聊天中發送註冊引導
+            print(f"用戶 {user_id} 尚未註冊 ({is_registered=}) 且指令 '{command_part}' 非公開允許，發送註冊引導訊息。")
+            send_registration_flex_message(reply_token, user_id)
+        else:  # 在群組中給出簡短提示
+            print(f"群組中用戶 {user_id} 尚未註冊，給出簡短提示。")
+            line_bot_api.reply_message(
+                reply_token,
+                TextSendMessage(text="請先私訊我完成註冊後再使用此功能 📝")
+            )
         return # 結束處理
     
     # 如果用戶輸入的是 "/填表" 或 "/填表單"，則發送填表 Flex 訊息
@@ -799,13 +828,14 @@ def health_check():
 
         health_data = {
             "status": "healthy" if db_status and n8n_status else "unhealthy", # 整體健康狀態取決於主要服務
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(TAIPEI_TZ).isoformat(),
             "services": {
                 "database": "connected" if db_status else "disconnected",
                 "n8n": n8n_connection_detail,
                 "dialogflow": "configured" if DIALOGFLOW_PROJECT_ID else "not_configured"
             },
-            "version": version_val
+            "version": version_val,
+            "timezone": "Asia/Taipei (GMT+8)"
         }
         
         return health_data, 200 if db_status and n8n_status else 503

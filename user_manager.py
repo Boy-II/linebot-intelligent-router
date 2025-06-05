@@ -1,10 +1,14 @@
 import logging
 from datetime import datetime
+import pytz
 from typing import Dict, Optional, List
 from sqlalchemy.orm import Session
 from models import User, get_db
 from sqlalchemy.exc import SQLAlchemyError
 from contextlib import contextmanager
+
+# 設定台北時區
+TAIPEI_TZ = pytz.timezone('Asia/Taipei')
 
 class UserManager:
     """
@@ -230,7 +234,7 @@ class UserManager:
                 
                 return {
                     "total_users": total_users,
-                    "latest_user_created": latest_user.created_at.isoformat() if latest_user else None,
+                    "latest_user_created": latest_user.created_at.replace(tzinfo=pytz.UTC).astimezone(TAIPEI_TZ).isoformat() if latest_user else None,
                     "database_type": "PostgreSQL",
                     "version": "1.0"
                 }
@@ -252,12 +256,14 @@ class UserManager:
                 return {
                     "status": "healthy",
                     "database": "connected",
-                    "timestamp": datetime.now().isoformat()
+                    "timestamp": datetime.now(TAIPEI_TZ).isoformat(),
+                    "timezone": "Asia/Taipei (GMT+8)"
                 }
         except Exception as e:
             return {
                 "status": "unhealthy",
                 "database": "disconnected",
                 "error": str(e),
-                "timestamp": datetime.now().isoformat()
+                "timestamp": datetime.now(TAIPEI_TZ).isoformat(),
+                "timezone": "Asia/Taipei (GMT+8)"
             }

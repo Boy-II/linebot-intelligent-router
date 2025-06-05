@@ -12,7 +12,7 @@ __pycache__
 .env.local
 .env.development
 .env.test
-README.md
+# README.md  # 保持 README 但排除其他 markdown
 *.md
 .venv
 data/
@@ -24,3 +24,8 @@ credentials/
 *.json
 zeabur.yaml
 zeabur-deployment-config.txt
+
+# 排除測試文件（生產環境不需要）
+test_*.py
+check_environment.py
+verify_all_fixes.py
